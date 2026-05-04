@@ -234,10 +234,6 @@ function Mrm() {
                   <span>Chaque joueur·se accumule des points en fonction de son placement sur chaque seed : <span className="rules-highlight">10-8-6-5-4-3-2-1</span>, et 0 points pour ceux·celles n'étant pas en mesure de finir</span>
                 </div>
                 <div className="rules-row">
-                  <i className="bi bi-person-x-fill rules-icon" />
-                  <span>Après la 3ème seed, les 2 joueur·se·s ayant accumulé le moins de points seront éliminé·e·s, suivi·e·s de 2 après la seed 4, un·e après la seed 5 et un·e après la 6</span>
-                </div>
-                <div className="rules-row">
                   <i className="bi bi-check-circle-fill rules-icon" />
                   <span>Les deux participant·e·s restant·e·s de chaque groupe se qualifient pour la phase finale des MRM qui se déroulera le lendemain soit le <span className="rules-highlight">24/05/2026</span></span>
                 </div>
