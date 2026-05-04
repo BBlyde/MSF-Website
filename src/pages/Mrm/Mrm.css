@@ -55,6 +55,7 @@
 
 .container-first {
     display: flex;
+    align-items: center;
 }
 
 .container-third {
@@ -731,6 +732,7 @@ button.player.mrm-match-pickable {
 
     .container-first {
         flex-direction: column;
+        align-items: center;
     }
 
     .mrm-playoffs {

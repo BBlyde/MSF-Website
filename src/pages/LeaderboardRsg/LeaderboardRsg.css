@@ -1,31 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@800&display=swap');
-
 .info {
   font-style: italic;
-}
-
-.player-name-inner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow: hidden;
-  min-width: 0;
-}
-
-.player-username {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  flex: 1;
-}
-
-.player-head {
-  width: 24px;
-  height: 24px;
-  border-radius: 3px;
-  flex-shrink: 0;
-  image-rendering: pixelated;
 }
 
 .sheet-source {
@@ -67,11 +41,6 @@
   text-align: center;
 }
 
-@keyframes textWave {
-  0%   { background-position: 0% center; }
-  100% { background-position: 200% center; }
-}
-
 .leaderboard-header h1 {
   font-size: 2.5rem;
   font-weight: 700;
@@ -91,47 +60,10 @@
   text-shadow: none;
 }
 
-.search-container {
-  max-width: 1000px;
-  margin: 2rem auto;
-  padding: 0 2rem;
-}
-
-.search-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  right: 1rem;
-  width: 18px;
-  height: 18px;
-  color: #8b949e;
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: 1rem 2.8rem 1rem 1rem;
-  font-size: 1rem;
-  font-family: 'Poppins', sans-serif;
-  background-color: #161b22;
-  color: #e6edf3;
-  border: 2px solid #30363d;
-  border-radius: 8px;
-  transition: border-color 0.3s ease;
-}
-
 .search-input:focus {
   outline: none;
   border-color: #a10d0d;
   box-shadow: 0 0 10px rgba(161, 13, 13, 0.3);
-}
-
-.search-input::placeholder {
-  color: #8b949e;
 }
 
 .leaderboard-list {
@@ -172,17 +104,6 @@
   width: 150px;
   text-align: right;
   padding-right: 1.5rem;
-}
-
-@keyframes fadeInRow {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .rank-row {
@@ -277,25 +198,6 @@
   font-weight: 500;
   max-width: 500px;
   margin: 2rem auto;
-}
-
-.no-data {
-  text-align: center;
-  padding: 2rem;
-  color: #8b949e;
-  font-size: 1.1rem;
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.7;
-  }
 }
 
 @media (max-width: 768px) {
