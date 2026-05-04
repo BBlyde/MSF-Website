@@ -42,15 +42,6 @@
     font-style: italic;
 }
 
-.section-divider {
-    width: 100%;
-    max-width: 1000px;
-    margin: 3rem auto;
-    height: 2px;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.25) 20%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.25) 80%, transparent 100%);
-    border-radius: 1px;
-}
-
 @keyframes textWave {
     0% { background-position: 200% center; }
     100% { background-position: -200% center; }

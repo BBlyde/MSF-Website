@@ -23,3 +23,12 @@ a:active {
   outline: none;
   text-decoration: none;
 }
+
+.section-divider {
+    width: 100%;
+    max-width: 1000px;
+    margin: 2rem auto;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.25) 20%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.25) 80%, transparent 100%);
+    border-radius: 1px;
+}

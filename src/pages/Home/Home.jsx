@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import './Home.css'
-
+import '../../index.css'
 
 function Home() {
   return (

@@ -1,5 +1,5 @@
 import './Admin.css'
-import PlayerForm from './PlayerForm'
+import PlayerForm from './components/PlayerForm'
 
 function buildPlayersPayload(formDataObj) {
   const players = {};

@@ -8,7 +8,7 @@ import Home from './pages/Home'
 import LeaderboardRsg from './pages/LeaderboardRsg'
 import LeaderboardRanked from './pages/LeaderboardRanked'
 import Mrm from './pages/Mrm'
-import MrmPrediction from './pages/Mrm/MrmPrediction'
+import MrmPrediction from './pages/MrmPrediction'
 import Tournament from './pages/Tournament'
 import Admin from './pages/Admin/Admin'
 

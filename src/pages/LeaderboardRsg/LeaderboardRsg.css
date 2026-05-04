@@ -65,7 +65,6 @@
 
 .leaderboard-header {
   text-align: center;
-  margin-bottom: 3rem;
 }
 
 @keyframes textWave {
@@ -90,14 +89,6 @@
   background-clip: text;
   animation: textWave 14s linear infinite;
   text-shadow: none;
-}
-
-.section-divider {
-  max-width: 1000px;
-  margin: 0 auto;
-  height: 2px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 20%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.25) 80%, transparent 100%);
-  border-radius: 1px;
 }
 
 .search-container {
