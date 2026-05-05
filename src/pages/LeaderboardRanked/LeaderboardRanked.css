@@ -18,13 +18,47 @@
     transition: color 0.3s ease;
 }
 
+.leaderboard-ranked .season-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin: 0 auto;
+}
+
+.leaderboard-ranked .season-arrow {
+    background: rgba(13, 84, 43, 0.15);
+    border: 1px solid rgba(134, 206, 52, 0.3);
+    border-radius: 8px;
+    color: #86CE34;
+    font-size: 1.4rem;
+    padding: 0.5rem 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+    line-height: 1;
+}
+
+.leaderboard-ranked .season-arrow:hover {
+    background: rgba(134, 206, 52, 0.15);
+    box-shadow: 0 0 10px rgba(134, 206, 52, 0.25);
+}
+
+.leaderboard-ranked .season-arrow:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+.leaderboard-ranked .season-arrow:disabled:hover {
+    background: rgba(13, 84, 43, 0.15);
+    box-shadow: none;
+}
+
 .leaderboard-ranked .countdown {
     width: fit-content;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.4rem;
-    margin: 0 auto 0;
     padding: 1rem 2rem;
     background: rgba(13, 84, 43, 0.12);
     border: 1px solid rgba(134, 206, 52, 0.25);

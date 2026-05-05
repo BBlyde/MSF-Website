@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './LeaderboardRanked.css'
 import coal1Img from '../../assets/coal1.png'
@@ -19,6 +19,8 @@ import diamond2Img from '../../assets/diamond2.png'
 import diamond3Img from '../../assets/diamond3.png'
 import netheriteImg from '../../assets/netherite.png'
 
+const DEFAULT_SEASON = 11
+
 function LeaderboardRanked() {
   const [players, setPlayers] = useState([])
   const [filteredPlayers, setFilteredPlayers] = useState([])
@@ -26,6 +28,9 @@ function LeaderboardRanked() {
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [timeLeft, setTimeLeft] = useState('')
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const season = parseInt(searchParams.get('season') || DEFAULT_SEASON, 10)
 
   const API_URL = 'https://back.mcsr-game.com/leaderboard'
 
@@ -107,16 +112,30 @@ function LeaderboardRanked() {
     <div className="leaderboard-ranked">
       <div className="leaderboard-container">
         <div className="leaderboard-header">
-          <h1>CLASSEMENT RANKED</h1>
+          <h1>CLASSEMENT RANKED S10</h1>
           <span className="info">Top 16 qualifié au <Link to="/mrm" className='info-link'>MSF Ranked Masters</Link></span>
         </div>
 
         <div className="section-divider" />
 
-        <div className="countdown">
-          <p className="countdown-label">FIN DE SAISON 10</p>
-          <div className="countdown-timer">{timeLeft}</div>
-          <p className="countdown-date">30 Avril 2026</p>
+        <div className="season-nav">
+          <button
+            className="season-arrow"
+            onClick={() => season > 1 && navigate(`/ranked?season=${season - 1}`)}
+            disabled={season <= 1}
+            aria-label="Saison précédente"
+          >&lt;</button>
+          <div className="countdown">
+            <p className="countdown-label">FIN DE SAISON</p>
+            <div className="countdown-timer">{timeLeft}</div>
+            <p className="countdown-date">30 Avril 2026</p>
+          </div>
+          <button
+            className="season-arrow"
+            onClick={() => season < 11 && navigate(`/ranked?season=${season + 1}`)}
+            disabled={season >= 11}
+            aria-label="Saison suivante"
+          >&gt;</button>
         </div>
 
         {loading && <div className="loading">Chargement du classement...</div>}
