@@ -28,6 +28,7 @@ function LeaderboardRanked() {
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [timeLeft, setTimeLeft] = useState('')
+  const [seasonEndDate, setSeasonEndDate] = useState(null)
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const season = parseInt(searchParams.get('season') || DEFAULT_SEASON, 10)
@@ -58,8 +59,9 @@ function LeaderboardRanked() {
     return `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`
   }
 
-  const formatTimeLeft = () => {
-    const targetDate = 1777507200 * 1000
+  const formatTimeLeft = (endTimestamp) => {
+    if (!endTimestamp) return '...'
+    const targetDate = endTimestamp * 1000
     const now = new Date().getTime()
     const difference = targetDate - now
 
@@ -75,18 +77,23 @@ function LeaderboardRanked() {
     return `${days}j ${hours}h ${minutes}m ${seconds}s`
   }
 
-  useEffect(() => {
-    fetchLeaderboard()
-  }, [])
+  const formatEndDate = (endTimestamp) => {
+    if (!endTimestamp) return ''
+    return new Date(endTimestamp * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
 
   useEffect(() => {
-    setTimeLeft(formatTimeLeft())
+    fetchLeaderboard(season)
+  }, [season])
+
+  useEffect(() => {
+    setTimeLeft(formatTimeLeft(seasonEndDate))
     const timer = setInterval(() => {
-      setTimeLeft(formatTimeLeft())
+      setTimeLeft(formatTimeLeft(seasonEndDate))
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [])
+  }, [seasonEndDate])
 
   useEffect(() => {
     const filtered = players.filter(player =>
@@ -95,12 +102,16 @@ function LeaderboardRanked() {
     setFilteredPlayers(filtered)
   }, [searchTerm, players])
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = async (s) => {
     try {
       setLoading(true)
-      const response = await axios.get(API_URL)
+      const [response, mcsrResponse] = await Promise.all([
+        axios.get(`${API_URL}?season=${s}`),
+        axios.get(`https://api.mcsrranked.com/leaderboard?season=${s}`)
+      ])
 
       setPlayers(response.data)
+      setSeasonEndDate(mcsrResponse.data.data.season.endsAt)
       setLoading(false)
     } catch (err) {
       setError("Erreur de récupération du classement, c'est la faute de phili..")
@@ -112,8 +123,8 @@ function LeaderboardRanked() {
     <div className="leaderboard-ranked">
       <div className="leaderboard-container">
         <div className="leaderboard-header">
-          <h1>CLASSEMENT RANKED S10</h1>
-          <span className="info">Top 16 qualifié au <Link to="/mrm" className='info-link'>MSF Ranked Masters</Link></span>
+          <h1><span className="ranked-title">CLASSEMENT RANKED </span><span className="ranked-season">S{season}</span></h1>
+          <span className="info">Détermine la qualification au <Link to="/mrm" className='info-link'>MSF Ranked Masters</Link></span>
         </div>
 
         <div className="section-divider" />
@@ -128,7 +139,7 @@ function LeaderboardRanked() {
           <div className="countdown">
             <p className="countdown-label">FIN DE SAISON</p>
             <div className="countdown-timer">{timeLeft}</div>
-            <p className="countdown-date">30 Avril 2026</p>
+            <p className="countdown-date">{formatEndDate(seasonEndDate)}</p>
           </div>
           <button
             className="season-arrow"
@@ -177,7 +188,7 @@ function LeaderboardRanked() {
                     {filteredPlayers.map((player, index) => (
                       <>
                         <tr
-                          className={`rank-row${player.placement > 16 ? ' rank-row--unqualified' : ''}`}
+                          className={`rank-row${player.placement > 16 ? ' rank-row--unqualified-todo' : ''}`}
                           key={`${player.id || player.username}-${searchTerm}`}
                           onClick={() => window.open(`https://mcsrranked.com/stats/${player.username}`, '_blank')}
                           style={{ cursor: 'pointer', animationDelay: `${index * 30}ms` }}
@@ -207,7 +218,7 @@ function LeaderboardRanked() {
                             </div>
                           </td>
                         </tr>
-                        {player.placement === 16 && (
+                        {/* {player.placement === 16 && (
                           <tr className="qualification-threshold">
                             <td colSpan="3">
                               <div className="threshold-line">
@@ -215,7 +226,7 @@ function LeaderboardRanked() {
                               </div>
                             </td>
                           </tr>
-                        )}
+                        )} */}
                       </>
                     ))}
                   </tbody>
