@@ -70,8 +70,6 @@ function normalizeOfficialState(rawOfficial) {
   return {
     group1: Array.isArray(data.group1) ? data.group1 : null,
     group2: Array.isArray(data.group2) ? data.group2 : null,
-    order1: Array.isArray(data.order1) ? data.order1 : null,
-    order2: Array.isArray(data.order2) ? data.order2 : null,
     semi1Winner: data.semi1Winner ?? null,
     semi2Winner: data.semi2Winner ?? null,
     thirdPlaceWinner: data.thirdPlaceWinner ?? null,
@@ -93,70 +91,45 @@ function buildBaselineLookup(baseline) {
   return { byUuid, byName }
 }
 
-function rankMapFromOrder(order, baselineLen) {
-  if (!Array.isArray(order) || order.length !== baselineLen) return {}
-  const seen = new Set()
-  const out = {}
-  for (let rank = 0; rank < order.length; rank += 1) {
-    const idx = order[rank]
-    if (!Number.isInteger(idx) || idx < 0 || idx >= baselineLen || seen.has(idx)) return {}
-    seen.add(idx)
-    out[idx] = rank
+function parseRowTotal(row) {
+  if (!row || typeof row !== 'object') return 0
+  const t = row.total
+  if (typeof t === 'number' && Number.isFinite(t)) return t
+  if (typeof t === 'string' && t.trim() !== '') {
+    const n = Number(t)
+    return Number.isFinite(n) ? n : 0
   }
-  return out
+  return 0
 }
 
-function rankMapFromOfficialOrder(order, baselineLen, baselineLookup) {
-  if (!Array.isArray(order) || !baselineLookup) return {}
-  const out = {}
-  const used = new Set()
-  order.forEach((raw, rank) => {
-    let baselineIdx = null
-    if (Number.isInteger(raw) && raw >= 0 && raw < baselineLen) {
-      baselineIdx = raw
-    } else if (typeof raw === 'string') {
-      const normalized = raw.trim().toLowerCase()
-      if (/^g[12]:\d+$/.test(normalized)) {
-        const idx = Number(normalized.split(':')[1])
-        if (Number.isInteger(idx) && idx >= 0 && idx < baselineLen) baselineIdx = idx
-      }
-      if (baselineIdx == null && baselineLookup.byUuid.has(normalized)) baselineIdx = baselineLookup.byUuid.get(normalized)
-      if (baselineIdx == null && baselineLookup.byName.has(normalized)) baselineIdx = baselineLookup.byName.get(normalized)
-    } else if (raw && typeof raw === 'object') {
-      const candidates = rowIdentityCandidates(raw)
-      for (const c of candidates) {
-        if (baselineLookup.byUuid.has(c)) {
-          baselineIdx = baselineLookup.byUuid.get(c)
-          break
-        }
-        if (baselineLookup.byName.has(c)) {
-          baselineIdx = baselineLookup.byName.get(c)
-          break
-        }
-      }
-    }
-    if (baselineIdx == null || used.has(baselineIdx)) return
-    used.add(baselineIdx)
-    out[baselineIdx] = rank
-  })
-  return out
-}
-
-function rankMapFromOfficialGroupRows(rows, baselineLookup) {
+/** Classement officiel dérivé de group1/2 : tri par total décroissant (même règle que le backend). */
+function rankMapFromOfficialGroupRowsByTotal(rows, baselineLookup) {
   if (!Array.isArray(rows) || !baselineLookup) return {}
+  const decorated = rows
+    .map((row, sourceIndex) => {
+      if (!row || typeof row !== 'object') return null
+      let baselineIdx = null
+      const rawUuid = typeof row.uuid === 'string' ? row.uuid.trim().toLowerCase() : ''
+      const rawName = typeof row.name === 'string' ? row.name.trim().toLowerCase() : ''
+      if (rawUuid && baselineLookup.byUuid.has(rawUuid)) baselineIdx = baselineLookup.byUuid.get(rawUuid)
+      else if (rawName && baselineLookup.byName.has(rawName)) baselineIdx = baselineLookup.byName.get(rawName)
+      if (baselineIdx == null) return null
+      return { baselineIdx, total: parseRowTotal(row), sourceIndex }
+    })
+    .filter(Boolean)
+  decorated.sort((a, b) => {
+    if (b.total !== a.total) return b.total - a.total
+    return a.sourceIndex - b.sourceIndex
+  })
   const out = {}
   const used = new Set()
-  rows.forEach((row, rank) => {
-    if (!row || typeof row !== 'object') return
-    let baselineIdx = null
-    const rawUuid = typeof row.uuid === 'string' ? row.uuid.trim().toLowerCase() : ''
-    const rawName = typeof row.name === 'string' ? row.name.trim().toLowerCase() : ''
-    if (rawUuid && baselineLookup.byUuid.has(rawUuid)) baselineIdx = baselineLookup.byUuid.get(rawUuid)
-    else if (rawName && baselineLookup.byName.has(rawName)) baselineIdx = baselineLookup.byName.get(rawName)
-    if (baselineIdx == null || used.has(baselineIdx)) return
-    used.add(baselineIdx)
-    out[baselineIdx] = rank
-  })
+  let rank = 0
+  for (const e of decorated) {
+    if (used.has(e.baselineIdx)) continue
+    used.add(e.baselineIdx)
+    out[e.baselineIdx] = rank
+    rank += 1
+  }
   return out
 }
 
@@ -560,7 +533,6 @@ function MrmPrediction() {
         : isGroup2Locked
           ? 'Le groupe 2 est verrouillé ; seul le groupe 1 reste modifiable.'
           : 'Fais glisser les lignes pour définir ton classement'
-  const groupsBorderColor = isGroup1Locked || isGroup2Locked ? '#6a6a6a' : '#86CE34'
 
   const globalLockAtLabel = useMemo(() => formatLockDateLabel(lockInfo.global.lockAt), [lockInfo.global.lockAt])
   const group1LockAtLabel = useMemo(() => formatLockDateLabel(lockInfo.group1.lockAt), [lockInfo.group1.lockAt])
@@ -929,21 +901,13 @@ function MrmPrediction() {
 
   const officialGroup1Ranks = useMemo(() => {
     if (!finishedInfo.group1) return {}
-    const fromOrder = rankMapFromOrder(officialInfo?.order1, g1.length)
-    if (Object.keys(fromOrder).length > 0) return fromOrder
-    const fromFlexibleOrder = rankMapFromOfficialOrder(officialInfo?.order1, g1.length, g1Lookup)
-    if (Object.keys(fromFlexibleOrder).length > 0) return fromFlexibleOrder
-    return rankMapFromOfficialGroupRows(officialInfo?.group1, g1Lookup)
-  }, [finishedInfo.group1, officialInfo, g1.length, g1Lookup])
+    return rankMapFromOfficialGroupRowsByTotal(officialInfo?.group1, g1Lookup)
+  }, [finishedInfo.group1, officialInfo?.group1, g1Lookup])
 
   const officialGroup2Ranks = useMemo(() => {
     if (!finishedInfo.group2) return {}
-    const fromOrder = rankMapFromOrder(officialInfo?.order2, g2.length)
-    if (Object.keys(fromOrder).length > 0) return fromOrder
-    const fromFlexibleOrder = rankMapFromOfficialOrder(officialInfo?.order2, g2.length, g2Lookup)
-    if (Object.keys(fromFlexibleOrder).length > 0) return fromFlexibleOrder
-    return rankMapFromOfficialGroupRows(officialInfo?.group2, g2Lookup)
-  }, [finishedInfo.group2, officialInfo, g2.length, g2Lookup])
+    return rankMapFromOfficialGroupRowsByTotal(officialInfo?.group2, g2Lookup)
+  }, [finishedInfo.group2, officialInfo?.group2, g2Lookup])
 
   const officialGroup1Rows = useMemo(
     () => (Array.isArray(officialInfo?.group1) ? officialInfo.group1 : []),
@@ -1118,7 +1082,7 @@ function MrmPrediction() {
                   <li>Finale correcte: +14</li>
                   <li>Petite finale correcte: +8</li>
                   <li>Demi-finale correcte: +8</li>
-                  <li>Score match correct: +10</li>
+                  <li>Score match correct: +4</li>
                 </ul>
               </div>
             </div>
