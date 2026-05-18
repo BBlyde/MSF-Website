@@ -114,7 +114,7 @@ function LeaderboardRanked() {
       setSeasonEndDate(mcsrResponse.data.data.season.endsAt)
       setLoading(false)
     } catch (err) {
-      setError("Erreur de récupération du classement, c'est la faute de phili..")
+      setError("Erreur de récupération du classement")
       setLoading(false)
     }
   }
@@ -138,8 +138,8 @@ function LeaderboardRanked() {
           >&lt;</button>
           <div className="countdown">
             <p className="countdown-label">FIN DE SAISON</p>
-            <div className="countdown-timer">{timeLeft}</div>
-            <p className="countdown-date">{formatEndDate(seasonEndDate)}</p>
+            <div className="countdown-timer">{loading ? '...' : timeLeft}</div>
+            <p className="countdown-date">{loading ? '...' : formatEndDate(seasonEndDate)}</p>
           </div>
           <button
             className="season-arrow"
