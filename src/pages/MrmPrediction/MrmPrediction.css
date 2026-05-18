@@ -188,7 +188,7 @@
         left: clamp(0.75rem, 2.5vw, 2.25rem);
         top: 50%;
         transform: translateY(-50%);
-        width: clamp(12rem, 10vw + 4rem, 15rem);
+        width: clamp(14rem, 12vw + 5rem, 17rem);
         z-index: 40;
     }
 
