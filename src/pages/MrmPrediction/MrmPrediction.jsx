@@ -70,8 +70,6 @@ function normalizeOfficialState(rawOfficial) {
   return {
     group1: Array.isArray(data.group1) ? data.group1 : null,
     group2: Array.isArray(data.group2) ? data.group2 : null,
-    order1: Array.isArray(data.order1) ? data.order1 : null,
-    order2: Array.isArray(data.order2) ? data.order2 : null,
     semi1Winner: data.semi1Winner ?? null,
     semi2Winner: data.semi2Winner ?? null,
     thirdPlaceWinner: data.thirdPlaceWinner ?? null,
@@ -584,7 +582,6 @@ function MrmPrediction() {
         : isGroup2Locked
           ? 'Le groupe 2 est verrouillé ; seul le groupe 1 reste modifiable.'
           : 'Fais glisser les lignes pour définir ton classement'
-  const groupsBorderColor = isGroup1Locked || isGroup2Locked ? '#6a6a6a' : '#86CE34'
 
   const globalLockAtLabel = useMemo(() => formatLockDateLabel(lockInfo.global.lockAt), [lockInfo.global.lockAt])
   const group1LockAtLabel = useMemo(() => formatLockDateLabel(lockInfo.group1.lockAt), [lockInfo.group1.lockAt])

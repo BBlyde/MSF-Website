@@ -39,8 +39,6 @@ function normalizeOfficial(raw) {
   const out = {}
   if (Array.isArray(data.group1)) out.group1 = data.group1
   if (Array.isArray(data.group2)) out.group2 = data.group2
-  if (Array.isArray(data.order1)) out.order1 = data.order1
-  if (Array.isArray(data.order2)) out.order2 = data.order2
   if (data.semi1Winner != null) out.semi1Winner = data.semi1Winner
   if (data.semi2Winner != null) out.semi2Winner = data.semi2Winner
   if (data.thirdPlaceWinner != null) out.thirdPlaceWinner = data.thirdPlaceWinner
