@@ -32,6 +32,10 @@ const DEFAULT_LOCK_STATE = {
   group1: { locked: false, lockAt: null },
   group2: { locked: false, lockAt: null },
   playoffs: { locked: false, lockAt: null },
+  semi1: { locked: false, lockAt: null },
+  semi2: { locked: false, lockAt: null },
+  thirdPlace: { locked: false, lockAt: null },
+  final: { locked: false, lockAt: null },
   serverNow: null,
 }
 const DEFAULT_FINISHED_STATE = {
@@ -43,12 +47,48 @@ const DEFAULT_FINISHED_STATE = {
   final: false,
 }
 
-function normalizeLockEntry(rawLock, fallbackLocked = false, fallbackLockAt = null) {
-  const raw = rawLock && typeof rawLock === 'object' ? rawLock : null
-  const lockAtCandidate = raw?.lockAt ?? fallbackLockAt
+function isoLockAtString(value) {
+  if (value == null) return null
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed !== '' ? trimmed : null
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return new Date(value).toISOString()
+  }
+  if (typeof value === 'object' && value.$date != null) {
+    return isoLockAtString(value.$date)
+  }
+  return null
+}
+
+function isLockAtActive(lockAt, serverNowIso) {
+  if (!lockAt) return false
+  const lockMs = Date.parse(lockAt)
+  if (Number.isNaN(lockMs)) return false
+  const serverMs = serverNowIso ? Date.parse(serverNowIso) : Date.now()
+  return !Number.isNaN(serverMs) && serverMs >= lockMs
+}
+
+function normalizeLockEntry(rawLock, fallbackLocked = false, fallbackLockAt = null, serverNowIso = null) {
+  if (rawLock != null && typeof rawLock === 'object' && !Array.isArray(rawLock)) {
+    if (typeof rawLock.locked === 'boolean') {
+      const lockAt = isoLockAtString(rawLock.lockAt) ?? isoLockAtString(fallbackLockAt)
+      return {
+        locked: rawLock.locked === true || fallbackLocked === true,
+        lockAt,
+      }
+    }
+    const lockAt = isoLockAtString(rawLock.$date) ?? isoLockAtString(fallbackLockAt)
+    return {
+      locked: isLockAtActive(lockAt, serverNowIso) || fallbackLocked === true,
+      lockAt,
+    }
+  }
+  const lockAt = isoLockAtString(rawLock) ?? isoLockAtString(fallbackLockAt)
   return {
-    locked: raw?.locked === true || fallbackLocked === true,
-    lockAt: typeof lockAtCandidate === 'string' && lockAtCandidate.trim() !== '' ? lockAtCandidate : null,
+    locked: isLockAtActive(lockAt, serverNowIso) || fallbackLocked === true,
+    lockAt,
   }
 }
 
@@ -77,90 +117,132 @@ function normalizeOfficialState(rawOfficial) {
   }
 }
 
-function buildBaselineLookup(baseline) {
+function pidFromPlayerIdentity(playerMap, idOrUuid, name) {
+  const needleUuid = typeof idOrUuid === 'string' ? idOrUuid.trim().toLowerCase() : ''
+  const needleName = typeof name === 'string' ? name.trim().toLowerCase() : ''
+  if (!needleUuid && !needleName) return null
+  for (const [pid, player] of playerMap.entries()) {
+    const u = typeof player?.uuid === 'string' ? player.uuid.trim().toLowerCase() : ''
+    const n = typeof player?.name === 'string' ? player.name.trim().toLowerCase() : ''
+    if (needleUuid && u === needleUuid) return pid
+    if (needleName && n === needleName) return pid
+  }
+  return null
+}
+
+function hasBracketSemiData(bracket) {
+  if (!bracket || typeof bracket !== 'object' || !Array.isArray(bracket.semi)) return false
+  return bracket.semi.some((slot) => {
+    if (!slot || typeof slot !== 'object') return false
+    const name = typeof slot.name === 'string' ? slot.name.trim() : ''
+    const id = typeof slot.id === 'string' ? slot.id.trim() : ''
+    return name !== '' || id !== ''
+  })
+}
+
+function winnerIdFromBracketSlots(slots, index0, index1, maxWins) {
+  if (!Array.isArray(slots)) return null
+  const left = slots[index0]
+  const right = slots[index1]
+  if (!left || !right) return null
+  const a = Number(left.score)
+  const b = Number(right.score)
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null
+  if (a >= maxWins && a > b) return typeof left.id === 'string' ? left.id.trim() : null
+  if (b >= maxWins && b > a) return typeof right.id === 'string' ? right.id.trim() : null
+  return null
+}
+
+function buildBracketSemiPair(bracket, index0, index1, fallbackPid0, fallbackPid1, playerMap) {
+  const slots = bracket?.semi
+  const slot0 = slots?.[index0]
+  const slot1 = slots?.[index1]
+  const pid0 =
+    slot0 && (slot0.id || slot0.name)
+      ? pidFromPlayerIdentity(playerMap, slot0.id, slot0.name) ?? fallbackPid0
+      : fallbackPid0
+  const pid1 =
+    slot1 && (slot1.id || slot1.name)
+      ? pidFromPlayerIdentity(playerMap, slot1.id, slot1.name) ?? fallbackPid1
+      : fallbackPid1
+  return {
+    pid0: pid0 ?? null,
+    pid1: pid1 ?? null,
+    player0: pid0 != null ? playerMap.get(pid0) ?? null : null,
+    player1: pid1 != null ? playerMap.get(pid1) ?? null : null,
+  }
+}
+
+function resolveOfficialWinnerPid(rawWinner, pairIds, playerMap, bracketSlots, index0, index1, maxWins) {
+  const fromField = resolveWinnerPid(rawWinner, pairIds, playerMap)
+  if (fromField) return fromField
+  const winnerKey = winnerIdFromBracketSlots(bracketSlots, index0, index1, maxWins)
+  if (!winnerKey) return null
+  return (
+    pidFromPlayerIdentity(playerMap, winnerKey, null) ??
+    resolveWinnerPid(winnerKey, pairIds, playerMap)
+  )
+}
+
+/** Overlay live seed scores from GET /api/tournament/mrm onto static roster order (drag indices). */
+function mergeGroupScoresFromApi(baseline, apiRows) {
+  if (!Array.isArray(baseline) || baseline.length === 0) return baseline
+  if (!Array.isArray(apiRows) || apiRows.length === 0) return baseline
   const byUuid = new Map()
   const byName = new Map()
-  baseline.forEach((p, i) => {
-    if (typeof p?.uuid === 'string' && p.uuid.trim() !== '') {
-      byUuid.set(p.uuid.trim().toLowerCase(), i)
-    }
-    if (typeof p?.name === 'string' && p.name.trim() !== '') {
-      byName.set(p.name.trim().toLowerCase(), i)
+  for (const row of apiRows) {
+    if (!row || typeof row !== 'object') continue
+    const uuid = typeof row.uuid === 'string' ? row.uuid.trim().toLowerCase() : ''
+    const name = typeof row.name === 'string' ? row.name.trim().toLowerCase() : ''
+    if (uuid) byUuid.set(uuid, row)
+    if (name) byName.set(name, row)
+  }
+  return baseline.map((player) => {
+    const uuid = typeof player.uuid === 'string' ? player.uuid.trim().toLowerCase() : ''
+    const name = typeof player.name === 'string' ? player.name.trim().toLowerCase() : ''
+    const live = (uuid && byUuid.get(uuid)) || (name && byName.get(name))
+    if (!live) return player
+    const pick = (key) => (live[key] != null ? live[key] : player[key])
+    return {
+      ...player,
+      s1: pick('s1'),
+      s2: pick('s2'),
+      s3: pick('s3'),
+      s4: pick('s4'),
+      s5: pick('s5'),
+      s6: pick('s6'),
+      total: pick('total'),
     }
   })
-  return { byUuid, byName }
 }
 
-function parseRowTotal(row) {
-  if (!row || typeof row !== 'object') return 0
-  const t = row.total
-  if (typeof t === 'number' && Number.isFinite(t)) return t
-  if (typeof t === 'string' && t.trim() !== '') {
-    const n = Number(t)
-    return Number.isFinite(n) ? n : 0
+/** Positions [min,max] acceptées par joueur selon le classement officiel (ex-aequo = même total). */
+function buildRankBandsForBaseline(baseline) {
+  if (!Array.isArray(baseline) || baseline.length === 0) return {}
+  const indices = baseline.map((_, i) => i)
+  indices.sort((a, b) => Number(baseline[b].total) - Number(baseline[a].total))
+  const bands = {}
+  for (let pos = 0; pos < indices.length; pos += 1) {
+    const baselineIdx = indices[pos]
+    const total = Number(baseline[baselineIdx].total)
+    let min = pos
+    let max = pos
+    for (let p = 0; p < indices.length; p += 1) {
+      if (Number(baseline[indices[p]].total) === total) {
+        min = Math.min(min, p)
+        max = Math.max(max, p)
+      }
+    }
+    bands[baselineIdx] = { min, max }
   }
-  return 0
+  return bands
 }
 
-/** Classement officiel dérivé de group1/2 : tri par total décroissant (même règle que le backend). */
-function rankMapFromOfficialGroupRowsByTotal(rows, baselineLookup) {
-  if (!Array.isArray(rows) || !baselineLookup) return {}
-  const decorated = rows
-    .map((row, sourceIndex) => {
-      if (!row || typeof row !== 'object') return null
-      let baselineIdx = null
-      const rawUuid = typeof row.uuid === 'string' ? row.uuid.trim().toLowerCase() : ''
-      const rawName = typeof row.name === 'string' ? row.name.trim().toLowerCase() : ''
-      if (rawUuid && baselineLookup.byUuid.has(rawUuid)) baselineIdx = baselineLookup.byUuid.get(rawUuid)
-      else if (rawName && baselineLookup.byName.has(rawName)) baselineIdx = baselineLookup.byName.get(rawName)
-      if (baselineIdx == null) return null
-      return { baselineIdx, total: parseRowTotal(row), sourceIndex }
-    })
-    .filter(Boolean)
-  decorated.sort((a, b) => {
-    if (b.total !== a.total) return b.total - a.total
-    return a.sourceIndex - b.sourceIndex
-  })
-  const out = {}
-  const used = new Set()
-  let rank = 0
-  for (const e of decorated) {
-    if (used.has(e.baselineIdx)) continue
-    used.add(e.baselineIdx)
-    out[e.baselineIdx] = rank
-    rank += 1
-  }
-  return out
-}
-
-function normalizeIdentity(value) {
-  if (typeof value !== 'string') return ''
-  return value.trim().toLowerCase()
-}
-
-function rowIdentityCandidates(row) {
-  if (!row || typeof row !== 'object') return []
-  const candidates = [
-    row.uuid,
-    row.id,
-    row.playerId,
-    row.runnerId,
-    row.name,
-    row.runner,
-    row.playerName,
-    row.username,
-  ]
-  return candidates.map(normalizeIdentity).filter(Boolean)
-}
-
-function playerIdentityCandidates(player) {
-  if (!player || typeof player !== 'object') return []
-  return [player.uuid, player.name].map(normalizeIdentity).filter(Boolean)
-}
-
-function hasComparableOfficialRows(rows) {
-  if (!Array.isArray(rows)) return false
-  return rows.some((row) => rowIdentityCandidates(row).length > 0)
+function distanceToRankBand(predictedRank, band) {
+  if (!band || typeof band.min !== 'number' || typeof band.max !== 'number') return null
+  if (predictedRank >= band.min && predictedRank <= band.max) return 0
+  if (predictedRank < band.min) return band.min - predictedRank
+  return predictedRank - band.max
 }
 
 function resolveWinnerPid(rawWinner, pairIds, playerMap) {
@@ -439,6 +521,7 @@ function BracketScoredPlayerRow({
   onIncrement,
   onScoreDigit,
   comparisonClass = '',
+  resultsRevealed = false,
 }) {
   const isWinner = pid != null && winnerPid === pid
   const isTbd =
@@ -458,10 +541,15 @@ function BracketScoredPlayerRow({
       </div>
     )
   }
-  const isLoser = winnerPid != null && !isWinner
+  const isLoser =
+    winnerPid != null &&
+    !isWinner &&
+    comparisonClass !== 'mrm-match-result-official'
+  const showPickedWinnerHighlight =
+    isWinner && (!resultsRevealed || comparisonClass === 'mrm-match-result-correct')
   const rowCls = ['mrm-bracket-scored-row']
   if (comparisonClass) rowCls.push(comparisonClass)
-  if (isWinner) rowCls.push('mrm-match-winner')
+  if (showPickedWinnerHighlight) rowCls.push('mrm-match-winner')
   else if (isLoser) rowCls.push('mrm-match-loser')
   if (!pickable) rowCls.push('mrm-bracket-scored-row--disabled')
 
@@ -493,8 +581,8 @@ function BracketScoredPlayerRow({
 
 function MrmPrediction() {
   const location = useLocation()
-  const g1 = groupe1Baseline
-  const g2 = groupe2Baseline
+  const [g1, setG1] = useState(() => groupe1Baseline)
+  const [g2, setG2] = useState(() => groupe2Baseline)
 
   const [discordUser, setDiscordUser] = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
@@ -505,6 +593,7 @@ function MrmPrediction() {
   const [semi2Score, setSemi2Score] = useState(() => [0, 0])
   const [thirdPlaceScore, setThirdPlaceScore] = useState(() => [0, 0])
   const [finalScore, setFinalScore] = useState(() => [0, 0])
+  const [tournamentBracket, setTournamentBracket] = useState(null)
   const [hydrated, setHydrated] = useState(false)
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false)
   const [isScoringOpen, setIsScoringOpen] = useState(false)
@@ -522,9 +611,14 @@ function MrmPrediction() {
   const finalPairKeyRef = useRef('')
 
   const isGlobalLocked = lockInfo.global.locked === true
-  const isGroup1Locked = isGlobalLocked || lockInfo.group1.locked === true
-  const isGroup2Locked = isGlobalLocked || lockInfo.group2.locked === true
-  const isPlayoffsLocked = isGlobalLocked || lockInfo.playoffs.locked === true
+  const isGroup1Locked = isGlobalLocked || lockInfo.group1.locked === true || finishedInfo.group1
+  const isGroup2Locked = isGlobalLocked || lockInfo.group2.locked === true || finishedInfo.group2
+  const isLegacyPlayoffsLocked = isGlobalLocked || lockInfo.playoffs.locked === true
+  const isSemi1Locked = isLegacyPlayoffsLocked || lockInfo.semi1.locked === true || finishedInfo.semi1
+  const isSemi2Locked = isLegacyPlayoffsLocked || lockInfo.semi2.locked === true || finishedInfo.semi2
+  const isThirdPlaceLocked = isLegacyPlayoffsLocked || lockInfo.thirdPlace.locked === true || finishedInfo.thirdPlace
+  const isFinalLocked = isLegacyPlayoffsLocked || lockInfo.final.locked === true || finishedInfo.final
+  const isAnyPlayoffPhaseLocked = isSemi1Locked || isSemi2Locked || isThirdPlaceLocked || isFinalLocked
   const groupsStatusText =
     isGroup1Locked && isGroup2Locked
       ? 'Les groupes sont verrouillés : le classement n’est plus modifiable.'
@@ -535,13 +629,14 @@ function MrmPrediction() {
           : 'Fais glisser les lignes pour définir ton classement'
 
   const globalLockAtLabel = useMemo(() => formatLockDateLabel(lockInfo.global.lockAt), [lockInfo.global.lockAt])
-  const group1LockAtLabel = useMemo(() => formatLockDateLabel(lockInfo.group1.lockAt), [lockInfo.group1.lockAt])
-  const group2LockAtLabel = useMemo(() => formatLockDateLabel(lockInfo.group2.lockAt), [lockInfo.group2.lockAt])
-  const playoffsLockAtLabel = useMemo(() => formatLockDateLabel(lockInfo.playoffs.lockAt), [lockInfo.playoffs.lockAt])
 
   const canEditGroup1 = !isGroup1Locked && authChecked && discordUser != null && hydrated
   const canEditGroup2 = !isGroup2Locked && authChecked && discordUser != null && hydrated
-  const canEditPlayoffs = !isPlayoffsLocked && authChecked && discordUser != null && hydrated
+  const canEditBracketBase = authChecked && discordUser != null && hydrated
+  const canEditSemi1 = canEditBracketBase && !isSemi1Locked
+  const canEditSemi2 = canEditBracketBase && !isSemi2Locked
+  const canEditThirdPlace = canEditBracketBase && !isThirdPlaceLocked
+  const canEditFinal = canEditBracketBase && !isFinalLocked
   const canSyncPrediction = authChecked && discordUser != null && hydrated
 
   const playerMap = useMemo(() => {
@@ -551,9 +646,9 @@ function MrmPrediction() {
     return m
   }, [g1, g2])
 
-  /** Tant que les deux groupes ne sont pas verrouillés, le bracket n’affiche pas les qualifiés (TBD). */
-  const showPlayoffBracketMatchups = isGroup1Locked && isGroup2Locked
-  const bracketRowPickable = canEditPlayoffs && showPlayoffBracketMatchups
+  /** Affiche le bracket si groupes lockés, une phase playoffs lockée, ou données admin bracket (semi). */
+  const showPlayoffBracketMatchups =
+    (isGroup1Locked && isGroup2Locked) || isAnyPlayoffPhaseLocked || hasBracketSemiData(tournamentBracket)
   const bracketDisplayPid = (id) => (showPlayoffBracketMatchups ? id : null)
   const bracketDisplayPlayer = (id) =>
     showPlayoffBracketMatchups && id != null ? playerMap.get(id) : null
@@ -570,10 +665,127 @@ function MrmPrediction() {
     [semi2Score, s2Ids[0], s2Ids[1]],
   )
 
+  const semi1BracketPair = useMemo(
+    () =>
+      buildBracketSemiPair(
+        tournamentBracket,
+        0,
+        1,
+        showPlayoffBracketMatchups ? s1Ids[0] : null,
+        showPlayoffBracketMatchups ? s1Ids[1] : null,
+        playerMap,
+      ),
+    [tournamentBracket, showPlayoffBracketMatchups, s1Ids, playerMap],
+  )
+
+  const semi2BracketPair = useMemo(
+    () =>
+      buildBracketSemiPair(
+        tournamentBracket,
+        2,
+        3,
+        showPlayoffBracketMatchups ? s2Ids[0] : null,
+        showPlayoffBracketMatchups ? s2Ids[1] : null,
+        playerMap,
+      ),
+    [tournamentBracket, showPlayoffBracketMatchups, s2Ids, playerMap],
+  )
+
+  const tournamentSemi1WinnerPid = useMemo(
+    () =>
+      resolveOfficialWinnerPid(
+        null,
+        [semi1BracketPair.pid0, semi1BracketPair.pid1].filter(Boolean),
+        playerMap,
+        tournamentBracket?.semi,
+        0,
+        1,
+        2,
+      ),
+    [tournamentBracket, semi1BracketPair, playerMap],
+  )
+
+  const tournamentSemi2WinnerPid = useMemo(
+    () =>
+      resolveOfficialWinnerPid(
+        null,
+        [semi2BracketPair.pid0, semi2BracketPair.pid1].filter(Boolean),
+        playerMap,
+        tournamentBracket?.semi,
+        2,
+        3,
+        2,
+      ),
+    [tournamentBracket, semi2BracketPair, playerMap],
+  )
+
+  const semi1ScoredForBracket = isSemi1Locked && finishedInfo.semi1
+  const semi2ScoredForBracket = isSemi2Locked && finishedInfo.semi2
+
+  /** Demi scorée → vainqueur officiel (recompute) pilote finale / petite finale, pas le prono verrouillé. */
+  const effectiveSemi1WinnerPid = useMemo(() => {
+    if (!semi1ScoredForBracket) return semi1Winner
+    return (
+      resolveOfficialWinnerPid(
+        officialInfo?.semi1Winner,
+        [semi1BracketPair.pid0, semi1BracketPair.pid1].filter(Boolean),
+        playerMap,
+        tournamentBracket?.semi,
+        0,
+        1,
+        2,
+      ) ??
+      tournamentSemi1WinnerPid ??
+      semi1Winner
+    )
+  }, [
+    semi1ScoredForBracket,
+    semi1Winner,
+    officialInfo?.semi1Winner,
+    semi1BracketPair,
+    playerMap,
+    tournamentBracket?.semi,
+    tournamentSemi1WinnerPid,
+  ])
+
+  const effectiveSemi2WinnerPid = useMemo(() => {
+    if (!semi2ScoredForBracket) return semi2Winner
+    return (
+      resolveOfficialWinnerPid(
+        officialInfo?.semi2Winner,
+        [semi2BracketPair.pid0, semi2BracketPair.pid1].filter(Boolean),
+        playerMap,
+        tournamentBracket?.semi,
+        2,
+        3,
+        2,
+      ) ??
+      tournamentSemi2WinnerPid ??
+      semi2Winner
+    )
+  }, [
+    semi2ScoredForBracket,
+    semi2Winner,
+    officialInfo?.semi2Winner,
+    semi2BracketPair,
+    playerMap,
+    tournamentBracket?.semi,
+    tournamentSemi2WinnerPid,
+  ])
+
   const finalistIds = useMemo(() => {
-    const a = [semi1Winner, semi2Winner].filter(Boolean)
-    return a.length === 2 ? a : [null, null]
-  }, [semi1Winner, semi2Winner])
+    const s1 = effectiveSemi1WinnerPid
+    const s2 = effectiveSemi2WinnerPid
+    if (s1 && s2) return [s1, s2]
+    const fromTournament = [tournamentSemi1WinnerPid, tournamentSemi2WinnerPid].filter(Boolean)
+    if (fromTournament.length === 2) return fromTournament
+    return [s1 ?? null, s2 ?? null]
+  }, [
+    effectiveSemi1WinnerPid,
+    effectiveSemi2WinnerPid,
+    tournamentSemi1WinnerPid,
+    tournamentSemi2WinnerPid,
+  ])
 
   const finalWinner = useMemo(
     () => winnerPidFromBoNScores(finalScore, 3, finalistIds[0], finalistIds[1]),
@@ -581,10 +793,10 @@ function MrmPrediction() {
   )
 
   const petiteFinaleIds = useMemo(() => {
-    const loser1 = matchLoserId(s1Ids, semi1Winner)
-    const loser2 = matchLoserId(s2Ids, semi2Winner)
+    const loser1 = matchLoserId(s1Ids, effectiveSemi1WinnerPid)
+    const loser2 = matchLoserId(s2Ids, effectiveSemi2WinnerPid)
     return loser1 && loser2 ? [loser1, loser2] : [null, null]
-  }, [s1Ids, s2Ids, semi1Winner, semi2Winner])
+  }, [s1Ids, s2Ids, effectiveSemi1WinnerPid, effectiveSemi2WinnerPid])
 
   const thirdPlaceWinner = useMemo(
     () => winnerPidFromBoNScores(thirdPlaceScore, 2, petiteFinaleIds[0], petiteFinaleIds[1]),
@@ -603,6 +815,28 @@ function MrmPrediction() {
     thirdPlaceWinner: null,
     finalWinner: null,
   })
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/tournament/mrm')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return
+        if (Array.isArray(data.group1) && data.group1.length > 0) {
+          setG1((prev) => mergeGroupScoresFromApi(prev, data.group1))
+        }
+        if (Array.isArray(data.group2) && data.group2.length > 0) {
+          setG2((prev) => mergeGroupScoresFromApi(prev, data.group2))
+        }
+        if (data.bracket && typeof data.bracket === 'object') {
+          setTournamentBracket(data.bracket)
+        }
+      })
+      .catch((err) => console.warn('[MRM prediction] tournament scores', err))
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -640,28 +874,38 @@ function MrmPrediction() {
         try {
           const res = await fetch(mrmPredictionApiUrl, { credentials: 'include' })
           const data = await res.json().catch(() => ({}))
+          const finished = normalizeFinishedState(data?.finished ?? data?.scoringPhases)
+          const official = normalizeOfficialState(data?.official)
           if (!cancelled) {
             const rawLocks = data?.locks && typeof data.locks === 'object' ? data.locks : {}
-            setFinishedInfo(normalizeFinishedState(data?.finished ?? data?.scoringPhases))
-            setOfficialInfo(normalizeOfficialState(data?.official))
+            const serverNowIso = typeof data?.serverNow === 'string' ? data.serverNow : null
+            setFinishedInfo(finished)
+            setOfficialInfo(official)
             setLockInfo({
-              global: normalizeLockEntry(rawLocks.global, data?.locked === true, data?.lockAt),
+              global: normalizeLockEntry(rawLocks.global, data?.locked === true, data?.lockAt, serverNowIso),
               group1: normalizeLockEntry(
                 rawLocks.group1,
-                data?.lockedGroup1 === true || data?.group1Locked === true,
+                data?.lockedGroup1 === true || data?.group1Locked === true || finished.group1,
                 data?.lockAtGroup1 ?? data?.group1LockAt,
+                serverNowIso,
               ),
               group2: normalizeLockEntry(
                 rawLocks.group2,
-                data?.lockedGroup2 === true || data?.group2Locked === true,
+                data?.lockedGroup2 === true || data?.group2Locked === true || finished.group2,
                 data?.lockAtGroup2 ?? data?.group2LockAt,
+                serverNowIso,
               ),
               playoffs: normalizeLockEntry(
                 rawLocks.playoffs,
                 data?.lockedPlayoffs === true || data?.playoffsLocked === true,
                 data?.lockAtPlayoffs ?? data?.playoffsLockAt,
+                serverNowIso,
               ),
-              serverNow: typeof data?.serverNow === 'string' ? data.serverNow : null,
+              semi1: normalizeLockEntry(rawLocks.semi1, finished.semi1, null, serverNowIso),
+              semi2: normalizeLockEntry(rawLocks.semi2, finished.semi2, null, serverNowIso),
+              thirdPlace: normalizeLockEntry(rawLocks.thirdPlace, finished.thirdPlace, null, serverNowIso),
+              final: normalizeLockEntry(rawLocks.final ?? rawLocks.finalPhase, finished.final, null, serverNowIso),
+              serverNow: serverNowIso,
             })
           }
           const pred = discordUser && data?.prediction && typeof data.prediction === 'object' ? data.prediction : null
@@ -692,8 +936,14 @@ function MrmPrediction() {
               )
             setSemi1Score(sc1)
             setSemi2Score(sc2)
-            const w1 = winnerPidFromBoNScores(sc1, 2, s1[0], s1[1])
-            const w2 = winnerPidFromBoNScores(sc2, 2, s2[0], s2[1])
+            const w1Pred = winnerPidFromBoNScores(sc1, 2, s1[0], s1[1])
+            const w2Pred = winnerPidFromBoNScores(sc2, 2, s2[0], s2[1])
+            const w1 = finished.semi1
+              ? resolveOfficialWinnerPid(official?.semi1Winner, s1, playerMap, null, 0, 1, 2) ?? w1Pred
+              : w1Pred
+            const w2 = finished.semi2
+              ? resolveOfficialWinnerPid(official?.semi2Winner, s2, playerMap, null, 2, 3, 2) ?? w2Pred
+              : w2Pred
             const thirdPlaceFinalists = [matchLoserId(s1, w1), matchLoserId(s2, w2)].filter(Boolean)
             const pf0 = thirdPlaceFinalists[0] ?? null
             const pf1 = thirdPlaceFinalists[1] ?? null
@@ -896,39 +1146,61 @@ function MrmPrediction() {
     finalWinner,
   ])
 
-  const g1Lookup = useMemo(() => buildBaselineLookup(g1), [g1])
-  const g2Lookup = useMemo(() => buildBaselineLookup(g2), [g2])
+  const group1Scored = isGroup1Locked && finishedInfo.group1
+  const group2Scored = isGroup2Locked && finishedInfo.group2
+  const playoffsSemi1Scored = isSemi1Locked && finishedInfo.semi1
+  const playoffsSemi2Scored = isSemi2Locked && finishedInfo.semi2
+  const playoffsThirdScored = isThirdPlaceLocked && finishedInfo.thirdPlace
+  const playoffsFinalScored = isFinalLocked && finishedInfo.final
 
-  const officialGroup1Ranks = useMemo(() => {
-    if (!finishedInfo.group1) return {}
-    return rankMapFromOfficialGroupRowsByTotal(officialInfo?.group1, g1Lookup)
-  }, [finishedInfo.group1, officialInfo?.group1, g1Lookup])
+  const officialGroup1Bands = useMemo(() => {
+    if (!group1Scored) return {}
+    return buildRankBandsForBaseline(g1)
+  }, [group1Scored, g1])
 
-  const officialGroup2Ranks = useMemo(() => {
-    if (!finishedInfo.group2) return {}
-    return rankMapFromOfficialGroupRowsByTotal(officialInfo?.group2, g2Lookup)
-  }, [finishedInfo.group2, officialInfo?.group2, g2Lookup])
-
-  const officialGroup1Rows = useMemo(
-    () => (Array.isArray(officialInfo?.group1) ? officialInfo.group1 : []),
-    [officialInfo],
-  )
-  const officialGroup2Rows = useMemo(
-    () => (Array.isArray(officialInfo?.group2) ? officialInfo.group2 : []),
-    [officialInfo],
-  )
+  const officialGroup2Bands = useMemo(() => {
+    if (!group2Scored) return {}
+    return buildRankBandsForBaseline(g2)
+  }, [group2Scored, g2])
 
   const officialSemi1WinnerPid = useMemo(
-    () => resolveWinnerPid(officialInfo?.semi1Winner, s1Ids, playerMap),
-    [officialInfo, s1Ids, playerMap],
+    () =>
+      resolveOfficialWinnerPid(
+        officialInfo?.semi1Winner,
+        [semi1BracketPair.pid0, semi1BracketPair.pid1].filter(Boolean),
+        playerMap,
+        tournamentBracket?.semi,
+        0,
+        1,
+        2,
+      ),
+    [officialInfo, tournamentBracket, semi1BracketPair, playerMap],
   )
   const officialSemi2WinnerPid = useMemo(
-    () => resolveWinnerPid(officialInfo?.semi2Winner, s2Ids, playerMap),
-    [officialInfo, s2Ids, playerMap],
+    () =>
+      resolveOfficialWinnerPid(
+        officialInfo?.semi2Winner,
+        [semi2BracketPair.pid0, semi2BracketPair.pid1].filter(Boolean),
+        playerMap,
+        tournamentBracket?.semi,
+        2,
+        3,
+        2,
+      ),
+    [officialInfo, tournamentBracket, semi2BracketPair, playerMap],
   )
   const officialThirdPlaceWinnerPid = useMemo(
-    () => resolveWinnerPid(officialInfo?.thirdPlaceWinner, petiteFinaleIds.filter(Boolean), playerMap),
-    [officialInfo, petiteFinaleIds, playerMap],
+    () =>
+      resolveOfficialWinnerPid(
+        officialInfo?.thirdPlaceWinner,
+        petiteFinaleIds.filter(Boolean),
+        playerMap,
+        tournamentBracket?.lower,
+        0,
+        1,
+        2,
+      ),
+    [officialInfo, tournamentBracket, petiteFinaleIds, playerMap],
   )
 
   const runnerUpId = useMemo(() => {
@@ -946,34 +1218,24 @@ function MrmPrediction() {
   const thirdPlayer =
     showPlayoffBracketMatchups && thirdPlaceWinner ? playerMap.get(thirdPlaceWinner) : null
   const officialFinalWinnerPid = useMemo(
-    () => resolveWinnerPid(officialInfo?.finalWinner, finalistIds.filter(Boolean), playerMap),
-    [officialInfo, finalistIds, playerMap],
+    () =>
+      resolveOfficialWinnerPid(
+        officialInfo?.finalWinner,
+        finalistIds.filter(Boolean),
+        playerMap,
+        tournamentBracket?.final,
+        0,
+        1,
+        3,
+      ),
+    [officialInfo, tournamentBracket, finalistIds, playerMap],
   )
 
-  const groupRowResultClass = useCallback((baselineIdx, rank, rankMap, enabled, player, officialRows = []) => {
+  const groupRowResultClass = useCallback((baselineIdx, rank, rankBands, enabled) => {
     if (!enabled) return ''
-    const hasRankMap = rankMap && Object.keys(rankMap).length > 0
-    const hasComparableRows = hasComparableOfficialRows(officialRows)
-    if (!hasRankMap && !hasComparableRows) return 'mrm-group-row-result-neutral'
-    const officialRank = rankMap[baselineIdx]
-    if (typeof officialRank === 'number') {
-      const delta = Math.abs(rank - officialRank)
-      if (delta === 0) return 'mrm-group-row-result-correct'
-      if (delta === 1) return 'mrm-group-row-result-near'
-      return 'mrm-group-row-result-wrong'
-    }
-    const playerIds = playerIdentityCandidates(player)
-    if (playerIds.length === 0) return 'mrm-group-row-result-neutral'
-    const matchDeltas = []
-    officialRows.forEach((row, officialPos) => {
-      const rowIds = rowIdentityCandidates(row)
-      if (rowIds.length === 0) return
-      if (playerIds.some((id) => rowIds.includes(id))) {
-        matchDeltas.push(Math.abs(rank - officialPos))
-      }
-    })
-    if (matchDeltas.length === 0) return 'mrm-group-row-result-neutral'
-    const delta = Math.min(...matchDeltas)
+    const band = rankBands?.[baselineIdx]
+    if (!band) return 'mrm-group-row-result-neutral'
+    const delta = distanceToRankBand(rank, band)
     if (delta === 0) return 'mrm-group-row-result-correct'
     if (delta === 1) return 'mrm-group-row-result-near'
     return 'mrm-group-row-result-wrong'
@@ -981,13 +1243,13 @@ function MrmPrediction() {
 
   const bracketResultClass = useCallback((pid, pickedWinner, officialWinner, enabled) => {
     if (!enabled || pid == null) return ''
-    if (!officialWinner) return 'mrm-match-result-neutral'
+    if (!officialWinner) return ''
     if (pickedWinner === officialWinner) {
-      return pid === officialWinner ? 'mrm-match-result-correct' : 'mrm-match-result-neutral'
+      return pid === officialWinner ? 'mrm-match-result-correct' : ''
     }
-    if (pickedWinner && pid === pickedWinner) return 'mrm-match-result-wrong-selected'
+    // Mauvais prono : rouge uniquement sur le vainqueur réel (l'autre case).
     if (pid === officialWinner) return 'mrm-match-result-official'
-    return 'mrm-match-result-neutral'
+    return ''
   }, [])
 
   predictionStateRef.current = {
@@ -1034,17 +1296,6 @@ function MrmPrediction() {
             Tous les pronostiques sont verrouillés
             {globalLockAtLabel ? ` depuis le ${globalLockAtLabel}` : ''}. La modification n&apos;est plus possible.
           </span>
-        </div>
-      ) : isGroup1Locked || isGroup2Locked || isPlayoffsLocked ? (
-        <div className="mrm-prediction-auth-banner mrm-prediction-auth-banner--locks" role="status">
-          <div>
-            <strong>Sections verrouillees :</strong>
-            <ul className="mrm-prediction-lock-list">
-              {isGroup1Locked ? <li>Groupe 1{group1LockAtLabel ? ` (depuis ${group1LockAtLabel})` : ''}</li> : null}
-              {isGroup2Locked ? <li>Groupe 2{group2LockAtLabel ? ` (depuis ${group2LockAtLabel})` : ''}</li> : null}
-              {isPlayoffsLocked ? <li>Playoffs{playoffsLockAtLabel ? ` (depuis ${playoffsLockAtLabel})` : ''}</li> : null}
-            </ul>
-          </div>
         </div>
       ) : null}
 
@@ -1117,7 +1368,7 @@ function MrmPrediction() {
         </aside>
         <div className="container">
           <div className="container-first">
-            <div className={`mrm-playoffs ${isPlayoffsLocked ? 'mrm-playoffs--locked' : ''}`}>
+            <div className={`mrm-playoffs ${isAnyPlayoffPhaseLocked ? 'mrm-playoffs--locked' : ''}`}>
               <div className="mrm-prediction-playoffs-head">
                 <h2 className="playoffs-title">PHASE FINALE</h2>
               </div>
@@ -1130,46 +1381,48 @@ function MrmPrediction() {
                   <div className="round-label">DEMI-FINALE 2</div>
                 </div>
                 <div className="bracket-matches">
-                  <div className="match">
+                  <div className={`match ${isSemi1Locked ? 'match--locked' : ''}`}>
                     <BracketScoredPlayerRow
-                      pid={bracketDisplayPid(s1Ids[0])}
-                      player={bracketDisplayPlayer(s1Ids[0])}
+                      pid={bracketDisplayPid(semi1BracketPair.pid0)}
+                      player={semi1BracketPair.player0}
                       side={0}
                       scoreValue={semi1Score[0]}
                       matchScores={semi1Score}
                       maxScore={2}
                       winnerPid={semi1Winner}
-                      pickable={bracketRowPickable}
+                      pickable={canEditSemi1 && showPlayoffBracketMatchups}
                       onIncrement={(side) => setSemi1Score((s) => tryIncrementBoN(s, side, 2))}
                       onScoreDigit={(side) => setSemi1Score((s) => applyScoreDigitClick(s, side, 2))}
                       comparisonClass={bracketResultClass(
-                        bracketDisplayPid(s1Ids[0]),
+                        bracketDisplayPid(semi1BracketPair.pid0),
                         semi1Winner,
                         officialSemi1WinnerPid,
-                        finishedInfo.semi1,
+                        playoffsSemi1Scored,
                       )}
+                      resultsRevealed={playoffsSemi1Scored}
                     />
                     <BracketScoredPlayerRow
-                      pid={bracketDisplayPid(s1Ids[1])}
-                      player={bracketDisplayPlayer(s1Ids[1])}
+                      pid={bracketDisplayPid(semi1BracketPair.pid1)}
+                      player={semi1BracketPair.player1}
                       side={1}
                       scoreValue={semi1Score[1]}
                       matchScores={semi1Score}
                       maxScore={2}
                       winnerPid={semi1Winner}
-                      pickable={bracketRowPickable}
+                      pickable={canEditSemi1 && showPlayoffBracketMatchups}
                       onIncrement={(side) => setSemi1Score((s) => tryIncrementBoN(s, side, 2))}
                       onScoreDigit={(side) => setSemi1Score((s) => applyScoreDigitClick(s, side, 2))}
                       comparisonClass={bracketResultClass(
-                        bracketDisplayPid(s1Ids[1]),
+                        bracketDisplayPid(semi1BracketPair.pid1),
                         semi1Winner,
                         officialSemi1WinnerPid,
-                        finishedInfo.semi1,
+                        playoffsSemi1Scored,
                       )}
+                      resultsRevealed={playoffsSemi1Scored}
                     />
                   </div>
                   <div className="connector connector-left" />
-                  <div className={`match match-final ${isPlayoffsLocked ? 'match-final--locked' : ''}`}>
+                  <div className={`match match-final ${isFinalLocked ? 'match-final--locked' : ''}`}>
                     <BracketScoredPlayerRow
                       pid={bracketDisplayPid(finalistIds[0])}
                       player={bracketDisplayPlayer(finalistIds[0])}
@@ -1178,15 +1431,16 @@ function MrmPrediction() {
                       matchScores={finalScore}
                       maxScore={3}
                       winnerPid={finalWinner}
-                      pickable={bracketRowPickable && finalistIds[0] != null && finalistIds[1] != null}
+                      pickable={canEditFinal && showPlayoffBracketMatchups && finalistIds[0] != null && finalistIds[1] != null}
                       onIncrement={(side) => setFinalScore((s) => tryIncrementBoN(s, side, 3))}
                       onScoreDigit={(side) => setFinalScore((s) => applyScoreDigitClick(s, side, 3))}
                       comparisonClass={bracketResultClass(
                         bracketDisplayPid(finalistIds[0]),
                         finalWinner,
                         officialFinalWinnerPid,
-                        finishedInfo.final,
+                        playoffsFinalScored,
                       )}
+                      resultsRevealed={playoffsFinalScored}
                     />
                     <BracketScoredPlayerRow
                       pid={bracketDisplayPid(finalistIds[1])}
@@ -1196,65 +1450,68 @@ function MrmPrediction() {
                       matchScores={finalScore}
                       maxScore={3}
                       winnerPid={finalWinner}
-                      pickable={bracketRowPickable && finalistIds[0] != null && finalistIds[1] != null}
+                      pickable={canEditFinal && showPlayoffBracketMatchups && finalistIds[0] != null && finalistIds[1] != null}
                       onIncrement={(side) => setFinalScore((s) => tryIncrementBoN(s, side, 3))}
                       onScoreDigit={(side) => setFinalScore((s) => applyScoreDigitClick(s, side, 3))}
                       comparisonClass={bracketResultClass(
                         bracketDisplayPid(finalistIds[1]),
                         finalWinner,
                         officialFinalWinnerPid,
-                        finishedInfo.final,
+                        playoffsFinalScored,
                       )}
+                      resultsRevealed={playoffsFinalScored}
                     />
                   </div>
                   <div className="connector connector-right" />
-                  <div className="match">
+                  <div className={`match ${isSemi2Locked ? 'match--locked' : ''}`}>
                     <BracketScoredPlayerRow
-                      pid={bracketDisplayPid(s2Ids[0])}
-                      player={bracketDisplayPlayer(s2Ids[0])}
+                      pid={bracketDisplayPid(semi2BracketPair.pid0)}
+                      player={semi2BracketPair.player0}
                       side={0}
                       scoreValue={semi2Score[0]}
                       matchScores={semi2Score}
                       maxScore={2}
                       winnerPid={semi2Winner}
-                      pickable={bracketRowPickable}
+                      pickable={canEditSemi2 && showPlayoffBracketMatchups}
                       onIncrement={(side) => setSemi2Score((s) => tryIncrementBoN(s, side, 2))}
                       onScoreDigit={(side) => setSemi2Score((s) => applyScoreDigitClick(s, side, 2))}
                       comparisonClass={bracketResultClass(
-                        bracketDisplayPid(s2Ids[0]),
+                        bracketDisplayPid(semi2BracketPair.pid0),
                         semi2Winner,
                         officialSemi2WinnerPid,
-                        finishedInfo.semi2,
+                        playoffsSemi2Scored,
                       )}
+                      resultsRevealed={playoffsSemi2Scored}
                     />
                     <BracketScoredPlayerRow
-                      pid={bracketDisplayPid(s2Ids[1])}
-                      player={bracketDisplayPlayer(s2Ids[1])}
+                      pid={bracketDisplayPid(semi2BracketPair.pid1)}
+                      player={semi2BracketPair.player1}
                       side={1}
                       scoreValue={semi2Score[1]}
                       matchScores={semi2Score}
                       maxScore={2}
                       winnerPid={semi2Winner}
-                      pickable={bracketRowPickable}
+                      pickable={canEditSemi2 && showPlayoffBracketMatchups}
                       onIncrement={(side) => setSemi2Score((s) => tryIncrementBoN(s, side, 2))}
                       onScoreDigit={(side) => setSemi2Score((s) => applyScoreDigitClick(s, side, 2))}
                       comparisonClass={bracketResultClass(
-                        bracketDisplayPid(s2Ids[1]),
+                        bracketDisplayPid(semi2BracketPair.pid1),
                         semi2Winner,
                         officialSemi2WinnerPid,
-                        finishedInfo.semi2,
+                        playoffsSemi2Scored,
                       )}
+                      resultsRevealed={playoffsSemi2Scored}
                     />
                   </div>
                 </div>
                 <div className="third-place-wrapper">
-                  <svg className="third-place-connectors" width="546" height="95" viewBox="0 0 546 95" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="third-place-connectors" width="546" height="95" viewBox="0 0 546 95" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M 173 0 L 174 88 L 198 88" stroke="#3a3a3a" strokeWidth="2" strokeDasharray="5 3" fill="none" />
                     <path d="M 373 0 L 372 88 L 348 88" stroke="#3a3a3a" strokeWidth="2" strokeDasharray="5 3" fill="none" />
                   </svg>
                   <div className="bracket-third-place">
                     <div className="round-label round-label-third">PETITE FINALE</div>
-                    <div className="match match-third-place">
+                    <div className={`match match-third-place ${isThirdPlaceLocked ? 'match--locked' : ''}`}>
                       <BracketScoredPlayerRow
                         pid={bracketDisplayPid(petiteFinaleIds[0])}
                         player={bracketDisplayPlayer(petiteFinaleIds[0])}
@@ -1263,15 +1520,16 @@ function MrmPrediction() {
                         matchScores={thirdPlaceScore}
                         maxScore={2}
                         winnerPid={thirdPlaceWinner}
-                        pickable={bracketRowPickable && petiteFinaleIds[0] != null && petiteFinaleIds[1] != null}
+                        pickable={canEditThirdPlace && showPlayoffBracketMatchups && petiteFinaleIds[0] != null && petiteFinaleIds[1] != null}
                         onIncrement={(side) => setThirdPlaceScore((s) => tryIncrementBoN(s, side, 2))}
                         onScoreDigit={(side) => setThirdPlaceScore((s) => applyScoreDigitClick(s, side, 2))}
                         comparisonClass={bracketResultClass(
                           bracketDisplayPid(petiteFinaleIds[0]),
                           thirdPlaceWinner,
                           officialThirdPlaceWinnerPid,
-                          finishedInfo.thirdPlace,
+                          playoffsThirdScored,
                         )}
+                        resultsRevealed={playoffsThirdScored}
                       />
                       <BracketScoredPlayerRow
                         pid={bracketDisplayPid(petiteFinaleIds[1])}
@@ -1281,15 +1539,16 @@ function MrmPrediction() {
                         matchScores={thirdPlaceScore}
                         maxScore={2}
                         winnerPid={thirdPlaceWinner}
-                        pickable={bracketRowPickable && petiteFinaleIds[0] != null && petiteFinaleIds[1] != null}
+                        pickable={canEditThirdPlace && showPlayoffBracketMatchups && petiteFinaleIds[0] != null && petiteFinaleIds[1] != null}
                         onIncrement={(side) => setThirdPlaceScore((s) => tryIncrementBoN(s, side, 2))}
                         onScoreDigit={(side) => setThirdPlaceScore((s) => applyScoreDigitClick(s, side, 2))}
                         comparisonClass={bracketResultClass(
                           bracketDisplayPid(petiteFinaleIds[1]),
                           thirdPlaceWinner,
                           officialThirdPlaceWinnerPid,
-                          finishedInfo.thirdPlace,
+                          playoffsThirdScored,
                         )}
+                        resultsRevealed={playoffsThirdScored}
                       />
                     </div>
                   </div>
@@ -1351,15 +1610,8 @@ function MrmPrediction() {
                   groupTitle="GROUPE 1"
                   interactionsEnabled={canEditGroup1}
                   isLocked={isGroup1Locked}
-                  getRowResultClass={(baselineIdx, rank, player) =>
-                    groupRowResultClass(
-                      baselineIdx,
-                      rank,
-                      officialGroup1Ranks,
-                      finishedInfo.group1,
-                      player,
-                      officialGroup1Rows,
-                    )}
+                  getRowResultClass={(baselineIdx, rank) =>
+                    groupRowResultClass(baselineIdx, rank, officialGroup1Bands, group1Scored)}
                 />
                 <SortableGroupTable
                   groupNum={2}
@@ -1370,15 +1622,8 @@ function MrmPrediction() {
                   groupTitle="GROUPE 2"
                   interactionsEnabled={canEditGroup2}
                   isLocked={isGroup2Locked}
-                  getRowResultClass={(baselineIdx, rank, player) =>
-                    groupRowResultClass(
-                      baselineIdx,
-                      rank,
-                      officialGroup2Ranks,
-                      finishedInfo.group2,
-                      player,
-                      officialGroup2Rows,
-                    )}
+                  getRowResultClass={(baselineIdx, rank) =>
+                    groupRowResultClass(baselineIdx, rank, officialGroup2Bands, group2Scored)}
                 />
               </div>
             </div>

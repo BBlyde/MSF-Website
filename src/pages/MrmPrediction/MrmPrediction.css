@@ -466,8 +466,19 @@
     opacity: 0.85;
 }
 
-.mrm-match-winner {
-    background: rgba(134, 206, 52, 0.15);
+/* Prono vainqueur avant lock + recompute */
+.mrm-match-winner,
+.match .mrm-bracket-scored-row.mrm-match-winner {
+    background: rgba(255, 202, 40, 0.28) !important;
+    color: #fff8e6;
+    opacity: 1;
+    border-bottom-color: #2a2a2a !important;
+}
+
+.mrm-bracket-scored-row.mrm-match-winner .mrm-bracket-name,
+.mrm-bracket-scored-row.mrm-match-winner .mrm-bracket-score-area {
+    color: rgb(255, 202, 40);
+    font-weight: 700;
 }
 
 .mrm-match-loser {
@@ -477,9 +488,15 @@
 .match .player.mrm-match-result-correct,
 .match button.player.mrm-match-result-correct,
 .match .mrm-bracket-scored-row.mrm-match-result-correct {
-    background: rgba(88, 170, 78, 0.28) !important;
-    color: #ecffe7;
+    background: rgba(134, 206, 52, 0.22) !important;
+    color: #f2ffe8;
     opacity: 1;
+}
+
+.match .mrm-bracket-scored-row.mrm-match-result-correct .mrm-bracket-name,
+.match .mrm-bracket-scored-row.mrm-match-result-correct .mrm-bracket-score-area {
+    color: #d4f5a0;
+    font-weight: 700;
 }
 
 .match .player.mrm-match-result-wrong-selected,

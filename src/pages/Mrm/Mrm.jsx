@@ -1,6 +1,5 @@
+import { useEffect, useState } from 'react'
 import './Mrm.css'
-import groupe1 from './groupe1.json'
-import groupe2 from './groupe2.json'
 import { Link } from 'react-router-dom'
 
 const BRACKET_PLACEHOLDER_HEAD = 'https://mc-heads.net/avatar/0385/48'
@@ -18,6 +17,20 @@ function BracketTbdSlot() {
 }
 
 function Mrm() {
+  const [mrmData, setMrmData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/tournament/mrm')
+      .then((res) => res.json())
+      .then((data) => setMrmData(data))
+      .catch((err) => console.error('Erreur chargement données MRM', err))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const group1 = [...(mrmData?.group1 ?? [])].sort((a, b) => Number(b.total) - Number(a.total))
+  const group2 = [...(mrmData?.group2 ?? [])].sort((a, b) => Number(b.total) - Number(a.total))
+
   return (
     <div className="d-flex flex-column align-items-center text-white mrm-container">
       <div className="mrm-header">
@@ -59,7 +72,7 @@ function Mrm() {
                   </div>
                 </div>
                 <div className="third-place-wrapper">
-                  <svg className="third-place-connectors" width="546" height="95" viewBox="0 0 546 95" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="third-place-connectors" width="546" height="95" viewBox="0 0 546 95" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M 173 0 L 174 88 L 198 88" stroke="#3a3a3a" strokeWidth="2" strokeDasharray="5 3" fill="none" />
                     <path d="M 373 0 L 372 88 L 348 88" stroke="#3a3a3a" strokeWidth="2" strokeDasharray="5 3" fill="none" />
                   </svg>
@@ -130,7 +143,7 @@ function Mrm() {
                         </tr>
                       </thead>
                       <tbody>
-                        {groupe1.map((player, i) => (
+                        {group1.map((player, i) => (
                           <tr key={i} className={i < 2 ? 'row-qualify' : ''}>
                             <td className="col-rank">{i + 1}</td>
                             <td className="col-player">
@@ -148,6 +161,11 @@ function Mrm() {
                             <td className="col-pts">{player.total}</td>
                           </tr>
                         ))}
+                        {!loading && group1.length === 0 && (
+                          <tr>
+                            <td colSpan="9" className="col-player">Aucune donnée</td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -171,7 +189,7 @@ function Mrm() {
                         </tr>
                       </thead>
                       <tbody>
-                        {groupe2.map((player, i) => (
+                        {group2.map((player, i) => (
                           <tr key={i} className={i < 2 ? 'row-qualify' : ''}>
                             <td className="col-rank">{i + 1}</td>
                             <td className="col-player">
@@ -189,6 +207,11 @@ function Mrm() {
                             <td className="col-pts">{player.total}</td>
                           </tr>
                         ))}
+                        {!loading && group2.length === 0 && (
+                          <tr>
+                            <td colSpan="9" className="col-player">Aucune donnée</td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>

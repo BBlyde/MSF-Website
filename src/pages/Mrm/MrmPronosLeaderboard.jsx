@@ -76,6 +76,12 @@ export default function MrmPronosLeaderboard({ highlightUserId = null }) {
                     alt=""
                     width={32}
                     height={32}
+                    onError={(e) => {
+                      const fallback = discordAvatarUrl(row.discordId, null)
+                      if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback
+                      }
+                    }}
                   />
                   <span className="mrm-prediction-leaderboard-name" title={name}>
                     {name}

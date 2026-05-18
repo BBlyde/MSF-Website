@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react'
 import SeedSelect from './SeedSelect'
 
 const seedFields = [1, 2, 3, 4, 5, 6]
-const initialSeeds = Object.fromEntries(seedFields.map((seedNumber) => [seedNumber, '0']))
 
-function PlayerForm({ playerNumber }) {
-  const [seeds, setSeeds] = useState(initialSeeds)
+function PlayerForm({ playerNumber, player }) {
+  const [seeds, setSeeds] = useState(
+    () => Object.fromEntries(seedFields.map((n) => [n, String(player?.['s' + n] ?? 0)]))
+  )
 
   const total = useMemo(
     () => Object.values(seeds).reduce((sum, value) => sum + Number(value), 0),
@@ -22,10 +23,10 @@ function PlayerForm({ playerNumber }) {
   return (
     <div className='form-player'>
       <div className='player-name'>
-        <input id={`player${playerNumber}-name`} name={`player${playerNumber}-name`} className='player-field' placeholder={`Player ${playerNumber}`}/>
+        <input id={`player${playerNumber}-name`} name={`player${playerNumber}-name`} className='player-field' placeholder={`Player ${playerNumber}`} defaultValue={player?.name ?? ''}/>
       </div>
       <div className='player-id'>
-        <input id={`player${playerNumber}-uuid`} name={`player${playerNumber}-uuid`} className='player-field' placeholder={`ID ${playerNumber}`}/>
+        <input id={`player${playerNumber}-uuid`} name={`player${playerNumber}-uuid`} className='player-field' placeholder={`ID ${playerNumber}`} defaultValue={player?.uuid ?? ''}/>
       </div>
       {seedFields.map((seedNumber) => (
         <SeedSelect
