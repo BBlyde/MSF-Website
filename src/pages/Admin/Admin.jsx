@@ -146,18 +146,18 @@ function Admin() {
           <div className='admin-match'>
             <span className='match-label'>DEMIE 1</span>
             <div className='player-name'>
-              <input id="player1-semi-name" name="player1-semi-name" className='player-field' placeholder="Player 1" defaultValue={bracket?.semi[0]?.name ?? ''} />
+              <input id="player1-semi-name" name="player1-semi-name" className='player-field' placeholder="Name" defaultValue={bracket?.semi[0]?.name ?? ''} />
             </div>
             <div className='player-id'>
-              <input id="player1-semi-id" name="player1-semi-id" className='player-field' placeholder="ID 1" defaultValue={bracket?.semi[0]?.id ?? ''} />
+              <input id="player1-semi-id" name="player1-semi-id" className='player-field' placeholder="ID" defaultValue={bracket?.semi[0]?.id ?? ''} />
             </div>
             <input type="number" min="0" max="2" id="player1-semi-score" name="player1-semi-score" placeholder='0' defaultValue={bracket?.semi[0]?.score ?? '0'}></input>
             VS
             <div className='player-name'>
-              <input id="player2-semi-name" name="player2-semi-name" className='player-field' placeholder="Player 2" defaultValue={bracket?.semi[1]?.name ?? ''} />
+              <input id="player2-semi-name" name="player2-semi-name" className='player-field' placeholder="Name" defaultValue={bracket?.semi[1]?.name ?? ''} />
             </div>
             <div className='player-id'>
-              <input id="player2-semi-id" name="player2-semi-id" className='player-field' placeholder="ID 2" defaultValue={bracket?.semi[1]?.id ?? ''} />
+              <input id="player2-semi-id" name="player2-semi-id" className='player-field' placeholder="ID" defaultValue={bracket?.semi[1]?.id ?? ''} />
             </div>
             <input type="number" min="0" max="2" id="player2-semi-score" name="player2-semi-score" placeholder='0' defaultValue={bracket?.semi[1]?.score ?? '0'}></input>
           </div>
@@ -165,18 +165,18 @@ function Admin() {
           <div className='admin-match'>
             <span className='match-label'>DEMIE 2</span>
             <div className='player-name'>
-              <input id="player3-semi-name" name="player3-semi-name" className='player-field' placeholder="Player 3" defaultValue={bracket?.semi[2]?.name ?? ''} />
+              <input id="player3-semi-name" name="player3-semi-name" className='player-field' placeholder="Name" defaultValue={bracket?.semi[2]?.name ?? ''} />
             </div>
             <div className='player-id'>
-              <input id="player3-semi-id" name="player3-semi-id" className='player-field' placeholder="ID 3" defaultValue={bracket?.semi[2]?.id ?? ''} />
+              <input id="player3-semi-id" name="player3-semi-id" className='player-field' placeholder="ID" defaultValue={bracket?.semi[2]?.id ?? ''} />
             </div>
             <input type="number" min="0" max="2" id="player3-semi-score" name="player3-semi-score" placeholder='0' defaultValue={bracket?.semi[2]?.score ?? '0'}></input>
             VS
             <div className='player-name'>
-              <input id="player4-semi-name" name="player4-semi-name" className='player-field' placeholder="Player 4" defaultValue={bracket?.semi[3]?.name ?? ''} />
+              <input id="player4-semi-name" name="player4-semi-name" className='player-field' placeholder="Name" defaultValue={bracket?.semi[3]?.name ?? ''} />
             </div>
             <div className='player-id'>
-              <input id="player4-semi-id" name="player4-semi-id" className='player-field' placeholder="ID 4" defaultValue={bracket?.semi[3]?.id ?? ''} />
+              <input id="player4-semi-id" name="player4-semi-id" className='player-field' placeholder="ID" defaultValue={bracket?.semi[3]?.id ?? ''} />
             </div>
             <input type="number" min="0" max="2" id="player4-semi-score" name="player4-semi-score" placeholder='0' defaultValue={bracket?.semi[3]?.score ?? '0'}></input>
           </div>
@@ -184,39 +184,39 @@ function Admin() {
           <div className='admin-match'>
             <span className='match-label'>LOWER</span>
             <div className='player-name'>
-              <input id="player3-lower-name" name="player3-lower-name" className='player-field' placeholder="Player 3" defaultValue={bracket?.lower[0]?.name ?? ''} />
+              <input id="player1-lower-name" name="player1-lower-name" className='player-field' placeholder="Name" defaultValue={bracket?.lower[0]?.name ?? ''} />
             </div>
             <div className='player-id'>
-              <input id="player3-lower-id" name="player3-lower-id" className='player-field' placeholder="ID 3" defaultValue={bracket?.lower[0]?.id ?? ''} />
+              <input id="player1-lower-id" name="player1-lower-id" className='player-field' placeholder="ID" defaultValue={bracket?.lower[0]?.id ?? ''} />
             </div>
-            <input type="number" min="0" max="2" id="player3-lower-score" name="player3-lower-score" placeholder='0' defaultValue={bracket?.lower[0]?.score ?? '0'}></input>
+            <input type="number" min="0" max="2" id="player1-lower-score" name="player1-lower-score" placeholder='0' defaultValue={bracket?.lower[0]?.score ?? '0'}></input>
             VS
             <div className='player-name'>
-              <input id="player4-lower-name" name="player4-lower-name" className='player-field' placeholder="Player 4" defaultValue={bracket?.lower[1]?.name ?? ''} />
+              <input id="player2-lower-name" name="player2-lower-name" className='player-field' placeholder="Name" defaultValue={bracket?.lower[1]?.name ?? ''} />
             </div>
             <div className='player-id'>
-              <input id="player4-lower-id" name="player4-lower-id" className='player-field' placeholder="ID 4" defaultValue={bracket?.lower[1]?.id ?? ''} />
+              <input id="player2-lower-id" name="player2-lower-id" className='player-field' placeholder="ID" defaultValue={bracket?.lower[1]?.id ?? ''} />
             </div>
-            <input type="number" min="0" max="2" id="player4-lower-score" name="player4-lower-score" placeholder='0' defaultValue={bracket?.lower[1]?.score ?? '0'}></input>
+            <input type="number" min="0" max="2" id="player2-lower-score" name="player2-lower-score" placeholder='0' defaultValue={bracket?.lower[1]?.score ?? '0'}></input>
           </div>
 
           <div className='admin-match'>
             <span className='match-label'>FINALE</span>
             <div className='player-name'>
-              <input id="player3-final-name" name="player3-final-name" className='player-field' placeholder="Player 3" defaultValue={bracket?.final[0]?.name ?? ''} />
+              <input id="player1-final-name" name="player1-final-name" className='player-field' placeholder="Name" defaultValue={bracket?.final[0]?.name ?? ''} />
             </div>
             <div className='player-id'>
-              <input id="player3-final-id" name="player3-final-id" className='player-field' placeholder="ID 3" defaultValue={bracket?.final[0]?.id ?? ''} />
+              <input id="player1-final-id" name="player1-final-id" className='player-field' placeholder="ID" defaultValue={bracket?.final[0]?.id ?? ''} />
             </div>
-            <input type="number" min="0" max="3" id="player3-final-score" name="player3-final-score" placeholder='0' defaultValue={bracket?.final[0]?.score ?? '0'}></input>
+            <input type="number" min="0" max="3" id="player1-final-score" name="player1-final-score" placeholder='0' defaultValue={bracket?.final[0]?.score ?? '0'}></input>
             VS
             <div className='player-name'>
-              <input id="player4-final-name" name="player4-final-name" className='player-field' placeholder="Player 4" defaultValue={bracket?.final[1]?.name ?? ''} />
+              <input id="player2-final-name" name="player2-final-name" className='player-field' placeholder="Name" defaultValue={bracket?.final[1]?.name ?? ''} />
             </div>
             <div className='player-id'>
-              <input id="player4-final-id" name="player4-final-id" className='player-field' placeholder="ID 4" defaultValue={bracket?.final[1]?.id ?? ''} />
+              <input id="player2-final-id" name="player2-final-id" className='player-field' placeholder="ID" defaultValue={bracket?.final[1]?.id ?? ''} />
             </div>
-            <input type="number" min="0" max="3" id="player4-final-score" name="player4-final-score" placeholder='0' defaultValue={bracket?.final[1]?.score ?? '0'}></input>
+            <input type="number" min="0" max="3" id="player2-final-score" name="player2-final-score" placeholder='0' defaultValue={bracket?.final[1]?.score ?? '0'}></input>
           </div>
           <button type="submit">Valider</button>
         </form>

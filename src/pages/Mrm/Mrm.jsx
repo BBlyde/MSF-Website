@@ -2,18 +2,35 @@ import { useEffect, useState } from 'react'
 import './Mrm.css'
 import { Link } from 'react-router-dom'
 
-const BRACKET_PLACEHOLDER_HEAD = 'https://mc-heads.net/avatar/0385/48'
+const BRACKET_PLACEHOLDER_UUID = '0385'
 
-function BracketTbdSlot() {
+function BracketSlot({ player }) {
+  const uuid = player?.id || BRACKET_PLACEHOLDER_UUID
+  const name = player?.name || ''
+  const score = player?.score ?? '0'
   return (
-    <div className="player tbd">
+    <div className="player">
       <div className="player-info">
-        <img src={BRACKET_PLACEHOLDER_HEAD} alt="" className="player-head" width={24} height={24} />
-        <span>TBD</span>
+        <img src={`https://mc-heads.net/avatar/${uuid}/48`} className="player-head" width={24} height={24} />
+        <span className='player-name'>{name ? name : 'TBD'}</span>
       </div>
-      <span className="player-score">0</span>
+      <span className="player-score">{score}</span>
     </div>
   )
+}
+
+function getMatchWinner(match, requiredScore) {
+  if (!match?.[0] || !match?.[1]) return null
+  const s0 = Number(match[0].score), s1 = Number(match[1].score)
+  if (s0 < requiredScore && s1 < requiredScore) return null
+  return s0 > s1 ? match[0] : match[1]
+}
+
+function getMatchLoser(match, requiredScore) {
+  if (!match?.[0] || !match?.[1]) return null
+  const s0 = Number(match[0].score), s1 = Number(match[1].score)
+  if (s0 < requiredScore && s1 < requiredScore) return null
+  return s0 < s1 ? match[0] : match[1]
 }
 
 function Mrm() {
@@ -30,6 +47,11 @@ function Mrm() {
 
   const group1 = [...(mrmData?.group1 ?? [])].sort((a, b) => Number(b.total) - Number(a.total))
   const group2 = [...(mrmData?.group2 ?? [])].sort((a, b) => Number(b.total) - Number(a.total))
+
+  const bracket = mrmData?.bracket
+  const finalWinner = getMatchWinner(bracket?.final, 3)
+  const finalLoser = getMatchLoser(bracket?.final, 3)
+  const lowerWinner = getMatchWinner(bracket?.lower, 2)
 
   return (
     <div className="d-flex flex-column align-items-center text-white mrm-container">
@@ -57,18 +79,18 @@ function Mrm() {
                 </div>
                 <div className="bracket-matches">
                   <div className="match">
-                    <BracketTbdSlot />
-                    <BracketTbdSlot />
+                    <BracketSlot player={bracket?.semi?.[0]} />
+                    <BracketSlot player={bracket?.semi?.[1]} />
                   </div>
                   <div className="connector connector-left" />
                   <div className="match match-final">
-                    <BracketTbdSlot />
-                    <BracketTbdSlot />
+                    <BracketSlot player={bracket?.final?.[0]} />
+                    <BracketSlot player={bracket?.final?.[1]} />
                   </div>
                   <div className="connector connector-right" />
                   <div className="match">
-                    <BracketTbdSlot />
-                    <BracketTbdSlot />
+                    <BracketSlot player={bracket?.semi?.[2]} />
+                    <BracketSlot player={bracket?.semi?.[3]} />
                   </div>
                 </div>
                 <div className="third-place-wrapper">
@@ -79,8 +101,8 @@ function Mrm() {
                   <div className="bracket-third-place">
                     <div className="round-label round-label-third">PETITE FINALE</div>
                     <div className="match match-third-place">
-                      <BracketTbdSlot />
-                      <BracketTbdSlot />
+                      <BracketSlot player={bracket?.lower?.[0]} />
+                      <BracketSlot player={bracket?.lower?.[1]} />
                     </div>
                   </div>
                 </div>
@@ -92,27 +114,27 @@ function Mrm() {
               <div className="podium-wrapper">
                 <div className="podium-player podium-second">
                   <div className="podium-head">
-                    <img src='https://mc-heads.net/avatar/0385/48' className="player-head" />
+                    <img src={`https://mc-heads.net/avatar/${finalLoser?.id ?? BRACKET_PLACEHOLDER_UUID}/48`} className="player-head" />
                   </div>
-                  <div className="podium-name">TBD</div>
+                  <div className="podium-name">{finalLoser?.name ?? 'TBD'}</div>
                   <div className="podium-block podium-block-second">
                     <span className="podium-rank">2</span>
                   </div>
                 </div>
                 <div className="podium-player podium-first">
                   <div className="podium-head">
-                    <img src='https://mc-heads.net/avatar/0385/48' className="player-head" />
+                    <img src={`https://mc-heads.net/avatar/${finalWinner?.id ?? BRACKET_PLACEHOLDER_UUID}/48`} className="player-head" />
                   </div>
-                  <div className="podium-name">TBD</div>
+                  <div className="podium-name">{finalWinner?.name ?? 'TBD'}</div>
                   <div className="podium-block podium-block-first">
                     <span className="podium-rank">1</span>
                   </div>
                 </div>
                 <div className="podium-player podium-third">
                   <div className="podium-head">
-                    <img src='https://mc-heads.net/avatar/0385/48' className="player-head" />
+                    <img src={`https://mc-heads.net/avatar/${lowerWinner?.id ?? BRACKET_PLACEHOLDER_UUID}/48`} className="player-head" />
                   </div>
-                  <div className="podium-name">TBD</div>
+                  <div className="podium-name">{lowerWinner?.name ?? 'TBD'}</div>
                   <div className="podium-block podium-block-third">
                     <span className="podium-rank">3</span>
                   </div>

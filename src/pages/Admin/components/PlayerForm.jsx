@@ -23,7 +23,7 @@ function PlayerForm({ playerNumber, player }) {
   return (
     <div className='form-player'>
       <div className='player-name'>
-        <input id={`player${playerNumber}-name`} name={`player${playerNumber}-name`} className='player-field' placeholder={`Player ${playerNumber}`} defaultValue={player?.name ?? ''}/>
+        <input id={`player${playerNumber}-name`} name={`player${playerNumber}-name`} className='player-field' placeholder="Name" defaultValue={player?.name ?? ''}/>
       </div>
       <div className='player-id'>
         <input id={`player${playerNumber}-uuid`} name={`player${playerNumber}-uuid`} className='player-field' placeholder={`ID ${playerNumber}`} defaultValue={player?.uuid ?? ''}/>

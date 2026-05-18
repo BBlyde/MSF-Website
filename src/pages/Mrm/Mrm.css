@@ -33,21 +33,6 @@
     font-style: italic;
 }
 
-.mrm-prediction-link {
-    display: inline-block;
-    margin-top: 0.75rem;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #86CE34;
-    text-decoration: none;
-    border-bottom: 1px solid rgba(134, 206, 52, 0.5);
-}
-
-.mrm-prediction-link:hover {
-    color: #a8e85c;
-    border-bottom-color: rgba(168, 232, 92, 0.7);
-}
-
 .container {
     display: flex;
     flex-direction: column;
@@ -143,7 +128,7 @@
     height: 40px;
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.3rem;
     justify-content: space-between;
     padding: 0 1rem;
     font-size: 0.875rem;
@@ -161,6 +146,14 @@
     flex: 1;
 }
 
+.player-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .match .player-head,
 .match .mrm-bracket-head {
     width: 24px;
@@ -168,42 +161,6 @@
     border-radius: 4px;
     flex-shrink: 0;
     object-fit: cover;
-}
-
-/* Boutons du bracket (pronostics) : même rendu que les lignes div */
-.match button.player,
-button.player.mrm-match-pickable {
-    appearance: none;
-    -webkit-appearance: none;
-    margin: 0;
-    width: 100%;
-    max-width: none;
-    border: none;
-    background: transparent;
-    font: inherit;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #d0d0d0;
-    text-align: left;
-    cursor: pointer;
-    line-height: 1.2;
-}
-
-.match button.player:focus-visible {
-    outline: 2px solid #86CE34;
-    outline-offset: -2px;
-    z-index: 1;
-}
-
-/* Vainqueur sélectionné : le vert doit primer sur le reset `button.player` (fond transparent) */
-.match button.player.mrm-match-winner {
-    background: rgba(134, 206, 52, 0.22) !important;
-    color: #f2ffe8;
-}
-
-.match button.player.mrm-match-winner .mrm-bracket-name {
-    color: #d4f5a0;
-    font-weight: 700;
 }
 
 .match button.mrm-bracket-scored-row {
@@ -231,7 +188,6 @@ button.player.mrm-match-pickable {
     -webkit-appearance: none;
 }
 
-/* Plus spécifique que `.match button.mrm-bracket-scored-row` pour retirer la barre sous le 2e joueur */
 .match button.mrm-bracket-scored-row:last-child {
     border-bottom: none;
 }
@@ -248,7 +204,6 @@ button.player.mrm-match-pickable {
 
 .mrm-bracket-scored-row .mrm-bracket-score-area {
     flex-shrink: 0;
-    margin-left: 0;
     min-width: 1.25rem;
     text-align: right;
 }
@@ -261,7 +216,6 @@ button.player.mrm-match-pickable {
 .mrm-bracket-scored-row.mrm-match-winner {
     background: rgba(134, 206, 52, 0.22) !important;
     color: #f2ffe8;
-    /* Garder le séparateur gris entre les deux joueurs, pas le vert de .mrm-match-winner */
     border-bottom-color: #2a2a2a !important;
 }
 
@@ -284,13 +238,6 @@ button.player.mrm-match-pickable {
     color: #aaa;
     font-size: 0.8rem;
     font-weight: 700;
-    margin-left: 0.75rem;
-    font-style: normal;
-}
-
-.player > .player-score {
-    margin-left: 0;
-    flex-shrink: 0;
 }
 
 .player:last-child {
@@ -349,10 +296,6 @@ button.player.mrm-match-pickable {
     transform: translateY(-50%);
 }
 
-.third-place-connectors {
-    display: block;
-}
-
 .third-place-wrapper {
     position: relative;
     width: 546px;
@@ -383,12 +326,7 @@ button.player.mrm-match-pickable {
 
 .match-third-place {
     width: 150px;
-    min-width: 150px;
     max-width: 150px;
-    border: 1px solid #3a3a3a;
-    border-radius: 6px;
-    overflow: hidden;
-    background: #161b22;
 }
 
 .mrm-podium {
@@ -704,22 +642,6 @@ button.player.mrm-match-pickable {
 .rules-highlight {
     color: #86CE34;
     text-underline-offset: 3px;
-}
-
-@media (max-width: 900px) {
-
-    .mrm-title,
-    .mrm-season {
-        font-size: 2rem;
-    }
-
-    .groups-wrapper {
-        gap: 1rem;
-    }
-
-    .group-table {
-        min-width: 260px;
-    }
 }
 
 @media (max-width: 990px) {
