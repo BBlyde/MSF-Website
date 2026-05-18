@@ -18,8 +18,6 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import './MrmPrediction.css'
-import groupe1Baseline from '../Mrm/groupe1.json'
-import groupe2Baseline from '../Mrm/groupe2.json'
 import { reconcileOrder } from '../Mrm/mrmPredictionStorage'
 import MrmPronosLeaderboard from '../Mrm/MrmPronosLeaderboard'
 import { predictionApiUrl } from '../../utils/predictionApi'
@@ -184,36 +182,33 @@ function resolveOfficialWinnerPid(rawWinner, pairIds, playerMap, bracketSlots, i
   )
 }
 
-/** Overlay live seed scores from GET /api/tournament/mrm onto static roster order (drag indices). */
-function mergeGroupScoresFromApi(baseline, apiRows) {
-  if (!Array.isArray(baseline) || baseline.length === 0) return baseline
-  if (!Array.isArray(apiRows) || apiRows.length === 0) return baseline
-  const byUuid = new Map()
-  const byName = new Map()
-  for (const row of apiRows) {
-    if (!row || typeof row !== 'object') continue
-    const uuid = typeof row.uuid === 'string' ? row.uuid.trim().toLowerCase() : ''
-    const name = typeof row.name === 'string' ? row.name.trim().toLowerCase() : ''
-    if (uuid) byUuid.set(uuid, row)
-    if (name) byName.set(name, row)
+function normalizeGroupPlayer(row) {
+  if (!row || typeof row !== 'object') return null
+  const name = typeof row.name === 'string' ? row.name : ''
+  const uuid = typeof row.uuid === 'string' ? row.uuid : ''
+  const num = (key) => {
+    const v = row[key]
+    if (v == null) return 0
+    const n = Number(v)
+    return Number.isFinite(n) ? n : 0
   }
-  return baseline.map((player) => {
-    const uuid = typeof player.uuid === 'string' ? player.uuid.trim().toLowerCase() : ''
-    const name = typeof player.name === 'string' ? player.name.trim().toLowerCase() : ''
-    const live = (uuid && byUuid.get(uuid)) || (name && byName.get(name))
-    if (!live) return player
-    const pick = (key) => (live[key] != null ? live[key] : player[key])
-    return {
-      ...player,
-      s1: pick('s1'),
-      s2: pick('s2'),
-      s3: pick('s3'),
-      s4: pick('s4'),
-      s5: pick('s5'),
-      s6: pick('s6'),
-      total: pick('total'),
-    }
-  })
+  return {
+    name,
+    uuid,
+    s1: num('s1'),
+    s2: num('s2'),
+    s3: num('s3'),
+    s4: num('s4'),
+    s5: num('s5'),
+    s6: num('s6'),
+    total: num('total'),
+  }
+}
+
+/** Roster + scores from GET /api/tournament/mrm (same source as Mrm.jsx). */
+function normalizeGroupFromApi(apiRows) {
+  if (!Array.isArray(apiRows)) return []
+  return apiRows.map(normalizeGroupPlayer).filter(Boolean)
 }
 
 /** Positions [min,max] acceptées par joueur selon le classement officiel (ex-aequo = même total). */
@@ -581,14 +576,15 @@ function BracketScoredPlayerRow({
 
 function MrmPrediction() {
   const location = useLocation()
-  const [g1, setG1] = useState(() => groupe1Baseline)
-  const [g2, setG2] = useState(() => groupe2Baseline)
+  const [g1, setG1] = useState([])
+  const [g2, setG2] = useState([])
+  const [groupsLoaded, setGroupsLoaded] = useState(false)
 
   const [discordUser, setDiscordUser] = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
 
-  const [order1, setOrder1] = useState(() => Array.from({ length: g1.length }, (_, i) => i))
-  const [order2, setOrder2] = useState(() => Array.from({ length: g2.length }, (_, i) => i))
+  const [order1, setOrder1] = useState([])
+  const [order2, setOrder2] = useState([])
   const [semi1Score, setSemi1Score] = useState(() => [0, 0])
   const [semi2Score, setSemi2Score] = useState(() => [0, 0])
   const [thirdPlaceScore, setThirdPlaceScore] = useState(() => [0, 0])
@@ -821,18 +817,22 @@ function MrmPrediction() {
     fetch('/api/tournament/mrm')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (cancelled || !data) return
-        if (Array.isArray(data.group1) && data.group1.length > 0) {
-          setG1((prev) => mergeGroupScoresFromApi(prev, data.group1))
+        if (cancelled) return
+        if (!data) {
+          setGroupsLoaded(true)
+          return
         }
-        if (Array.isArray(data.group2) && data.group2.length > 0) {
-          setG2((prev) => mergeGroupScoresFromApi(prev, data.group2))
-        }
+        setG1(normalizeGroupFromApi(data.group1))
+        setG2(normalizeGroupFromApi(data.group2))
         if (data.bracket && typeof data.bracket === 'object') {
           setTournamentBracket(data.bracket)
         }
+        setGroupsLoaded(true)
       })
-      .catch((err) => console.warn('[MRM prediction] tournament scores', err))
+      .catch((err) => {
+        console.warn('[MRM prediction] tournament scores', err)
+        if (!cancelled) setGroupsLoaded(true)
+      })
     return () => {
       cancelled = true
     }
@@ -857,7 +857,7 @@ function MrmPrediction() {
   }, [location.pathname])
 
   useEffect(() => {
-    if (!authChecked) return
+    if (!authChecked || !groupsLoaded) return
 
     baselinePredictionPayloadRef.current = null
     captureBaselineAfterHydrateRef.current = false
@@ -998,8 +998,7 @@ function MrmPrediction() {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- g1/g2 lengths follow imports
-  }, [authChecked, discordUser, location.pathname])
+  }, [authChecked, groupsLoaded, discordUser, location.pathname, g1.length, g2.length, playerMap])
 
   useEffect(() => {
     if (!hydrated) return
@@ -1330,10 +1329,9 @@ function MrmPrediction() {
                 </ul>
                 <p className="mrm-prediction-scoring-section">Phase finale</p>
                 <ul className="mrm-prediction-scoring-list">
-                  <li>Finale correcte: +14</li>
-                  <li>Petite finale correcte: +8</li>
-                  <li>Demi-finale correcte: +8</li>
-                  <li>Score match correct: +4</li>
+                  <li>Demi-finale: +4 (Bonus score +6)</li>
+                  <li>Petite finale: +6 (Bonus score +8)</li>
+                  <li>Finale: +8 (Bonus score +10)</li>
                 </ul>
               </div>
             </div>
