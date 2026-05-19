@@ -33,6 +33,7 @@ async function postJson(url, payload, errorLabel) {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(payload),
   });
 
@@ -49,14 +50,55 @@ const playerFields = [1, 2, 3, 4, 5, 6, 7, 8]
 function Admin() {
   const [mrmData, setMrmData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [discordUser, setDiscordUser] = useState(null)
 
   useEffect(() => {
+    let cancelled = false
+
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return
+        setDiscordUser(data.user ?? null)
+        setIsAdmin(Boolean(data.isAdmin))
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDiscordUser(null)
+          setIsAdmin(false)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAuthChecked(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!authChecked || !isAdmin) return
+
+    let cancelled = false
+    setLoading(true)
+
     fetch('/api/tournament/mrm')
       .then((res) => res.json())
-      .then((data) => setMrmData(data))
+      .then((data) => {
+        if (!cancelled) setMrmData(data)
+      })
       .catch((err) => console.error('Erreur chargement données MRM', err))
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [authChecked, isAdmin])
 
   const formKey = mrmData ? 'loaded' : 'loading'
   const bracket = mrmData?.bracket
@@ -95,7 +137,22 @@ function Admin() {
 
       <div className="section-divider" />
 
-      {loading ? (
+      {!authChecked ? (
+        <span className="info">Vérification de l&apos;accès...</span>
+      ) : !discordUser ? (
+        <div className="admin-auth-banner" role="status">
+          <span>Connecte-toi avec Discord pour accéder à l&apos;administration.</span>
+          <a className="admin-auth-link" href="/api/auth/discord">
+            Se connecter avec Discord
+          </a>
+        </div>
+      ) : !isAdmin ? (
+        <div className="admin-auth-banner admin-auth-banner--denied" role="status">
+          <span>
+            Accès refusé. Ton compte Discord n&apos;est pas autorisé à utiliser cette page.
+          </span>
+        </div>
+      ) : loading ? (
         <span className="info">Chargement...</span>
       ) : (
         <>

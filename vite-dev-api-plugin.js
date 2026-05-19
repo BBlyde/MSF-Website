@@ -3,6 +3,7 @@ import discordCallback from './api/auth/discord/callback.js'
 import authMe from './api/auth/me.js'
 import authLogout from './api/auth/logout.js'
 import { proxyBrowserApiToBackendAdapter } from './api/lib/backendApiProxy.js'
+import { denyUnlessAdmin, tournamentWriteRequiresAdmin } from './api/lib/adminAuth.js'
 import predictionsMrm from './api/predictions/mrm.js'
 
 function vercelResponseAdapter(nodeRes) {
@@ -85,6 +86,13 @@ export function devApiPlugin() {
               return
             }
             const pathWithQuery = pathname + (url.search || '')
+            if (
+              pathname.startsWith('/api/tournament') &&
+              tournamentWriteRequiresAdmin(req.method) &&
+              denyUnlessAdmin(req, vres)
+            ) {
+              return
+            }
             await proxyBrowserApiToBackendAdapter(req, pathWithQuery, vres)
           } catch (err) {
             console.error('[msf-dev-api]', err)

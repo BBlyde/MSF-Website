@@ -1,3 +1,30 @@
+.admin-auth-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 16px;
+  padding: 16px 20px;
+  max-width: 520px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.admin-auth-banner--denied {
+  border-color: rgba(220, 80, 80, 0.5);
+}
+
+.admin-auth-link {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.admin-auth-link:hover {
+  color: #c8d6ff;
+}
+
 .group-section {
   margin-bottom: 20px;
 }
