@@ -99,6 +99,7 @@
     align-self: stretch;
     --mrm-leaderboard-width: clamp(11.25rem, 9vw + 4.5rem, 14rem);
     --mrm-leaderboard-max-height: min(60vh, 30rem);
+    --mrm-leaderboard-mobile-max-height: min(54vh, 24rem);
 }
 
 .mrm-prediction-leaderboard-shell {
@@ -238,6 +239,12 @@
         align-items: flex-start;
         gap: 0.5rem;
         z-index: 35;
+        pointer-events: none;
+    }
+
+    .mrm-prediction-scoring-shell .mrm-prediction-scoring-toggle,
+    .mrm-prediction-scoring-shell .mrm-prediction-scoring-panel {
+        pointer-events: auto;
     }
 
     .mrm-prediction-scoring-toggle {
@@ -294,6 +301,12 @@
         align-items: flex-end;
         gap: 0.5rem;
         z-index: 35;
+        pointer-events: none;
+    }
+
+    .mrm-prediction-leaderboard-shell .mrm-prediction-leaderboard-toggle,
+    .mrm-prediction-leaderboard-shell .mrm-prediction-leaderboard-panel {
+        pointer-events: auto;
     }
 
     .mrm-prediction-leaderboard-toggle {
@@ -327,7 +340,7 @@
     }
 
     .mrm-prediction-leaderboard-panel--open {
-        max-height: min(72vh, 32rem);
+        max-height: var(--mrm-leaderboard-mobile-max-height);
         opacity: 1;
         transform: translateY(0);
         pointer-events: auto;
@@ -336,7 +349,7 @@
     .mrm-prediction-leaderboard {
         width: 100%;
         max-width: 100%;
-        max-height: min(72vh, 32rem);
+        max-height: var(--mrm-leaderboard-mobile-max-height);
         margin: 0;
         box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
     }
