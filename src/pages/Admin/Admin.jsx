@@ -33,6 +33,7 @@ async function postJson(url, payload, errorLabel) {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(payload),
   });
 
@@ -46,17 +47,77 @@ async function postJson(url, payload, errorLabel) {
 
 const playerFields = [1, 2, 3, 4, 5, 6, 7, 8]
 
+const RECOMPUTE_PHASES = [
+  { key: 'group1', label: 'Groupe 1' },
+  { key: 'group2', label: 'Groupe 2' },
+  { key: 'semi1', label: 'Demi 1' },
+  { key: 'semi2', label: 'Demi 2' },
+  { key: 'thirdPlace', label: '3e place' },
+  { key: 'final', label: 'Finale' },
+]
+
+const DEFAULT_RECOMPUTE_PHASES = {
+  group1: false,
+  group2: false,
+  semi1: false,
+  semi2: false,
+  thirdPlace: false,
+  final: false,
+}
+
 function Admin() {
   const [mrmData, setMrmData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [discordUser, setDiscordUser] = useState(null)
+  const [recomputePhases, setRecomputePhases] = useState(DEFAULT_RECOMPUTE_PHASES)
 
   useEffect(() => {
+    let cancelled = false
+
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return
+        setDiscordUser(data.user ?? null)
+        setIsAdmin(Boolean(data.isAdmin))
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDiscordUser(null)
+          setIsAdmin(false)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAuthChecked(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!authChecked || !isAdmin) return
+
+    let cancelled = false
+    setLoading(true)
+
     fetch('/api/tournament/mrm')
       .then((res) => res.json())
-      .then((data) => setMrmData(data))
+      .then((data) => {
+        if (!cancelled) setMrmData(data)
+      })
       .catch((err) => console.error('Erreur chargement données MRM', err))
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [authChecked, isAdmin])
 
   const formKey = mrmData ? 'loaded' : 'loading'
   const bracket = mrmData?.bracket
@@ -88,6 +149,16 @@ function Admin() {
     await postJson('/api/tournament/mrm/bracket', payload, 'Erreur envoi bracket')
   }
 
+  const handleRecomputeSubmit = async (event) => {
+    event.preventDefault()
+    if (!window.confirm('Lancer le recompute des scores ?')) return
+    await postJson('/api/tournament/mrm/score/recompute', recomputePhases, 'Erreur recompute scores')
+  }
+
+  const toggleRecomputePhase = (key) => {
+    setRecomputePhases((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
   return (
     <div className="d-flex flex-column align-items-center text-white home-container">
       <h1 className="home-title">MSF ADMIN</h1>
@@ -95,7 +166,22 @@ function Admin() {
 
       <div className="section-divider" />
 
-      {loading ? (
+      {!authChecked ? (
+        <span className="info">Vérification de l&apos;accès...</span>
+      ) : !discordUser ? (
+        <div className="admin-auth-banner" role="status">
+          <span>Connecte-toi avec Discord pour accéder à l&apos;administration.</span>
+          <a className="admin-auth-link" href="/api/auth/discord">
+            Se connecter avec Discord
+          </a>
+        </div>
+      ) : !isAdmin ? (
+        <div className="admin-auth-banner admin-auth-banner--denied" role="status">
+          <span>
+            Accès refusé. Ton compte Discord n&apos;est pas autorisé à utiliser cette page.
+          </span>
+        </div>
+      ) : loading ? (
         <span className="info">Chargement...</span>
       ) : (
         <>
@@ -218,6 +304,22 @@ function Admin() {
             </div>
             <input type="number" min="0" max="3" id="player2-final-score" name="player2-final-score" placeholder='0' defaultValue={bracket?.final[1]?.score ?? '0'}></input>
           </div>
+          <button type="submit">Valider</button>
+        </form>
+      </div>
+
+      <div className="admin-recompute-section">
+        <form onSubmit={handleRecomputeSubmit} className="admin-recompute-form">
+          {RECOMPUTE_PHASES.map(({ key, label }) => (
+            <label key={key} className="admin-recompute-label">
+              <input
+                type="checkbox"
+                checked={recomputePhases[key]}
+                onChange={() => toggleRecomputePhase(key)}
+              />
+              {label}
+            </label>
+          ))}
           <button type="submit">Valider</button>
         </form>
       </div>

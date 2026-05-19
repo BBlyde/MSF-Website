@@ -1,4 +1,5 @@
 import { verifySignedPayload, parseCookies, COOKIE_SESSION } from '../lib/oauth.js'
+import { isDiscordAdmin } from '../lib/adminAuth.js'
 
 export default function handler(req, res) {
   if (req.method !== 'GET') {
@@ -17,7 +18,7 @@ export default function handler(req, res) {
   const payload = verifySignedPayload(raw, secret)
 
   if (!payload || !payload.id) {
-    res.status(200).json({ user: null })
+    res.status(200).json({ user: null, isAdmin: false })
     return
   }
 
@@ -28,5 +29,6 @@ export default function handler(req, res) {
       globalName: payload.globalName,
       avatar: payload.avatar,
     },
+    isAdmin: isDiscordAdmin(payload.id),
   })
 }
