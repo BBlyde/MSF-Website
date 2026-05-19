@@ -67,3 +67,26 @@
   font-weight: bold;
   justify-content: space-between;
 }
+
+.admin-recompute-section {
+  margin-top: 24px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.admin-recompute-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-recompute-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}

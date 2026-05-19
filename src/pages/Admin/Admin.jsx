@@ -47,12 +47,31 @@ async function postJson(url, payload, errorLabel) {
 
 const playerFields = [1, 2, 3, 4, 5, 6, 7, 8]
 
+const RECOMPUTE_PHASES = [
+  { key: 'group1', label: 'Groupe 1' },
+  { key: 'group2', label: 'Groupe 2' },
+  { key: 'semi1', label: 'Demi 1' },
+  { key: 'semi2', label: 'Demi 2' },
+  { key: 'thirdPlace', label: '3e place' },
+  { key: 'final', label: 'Finale' },
+]
+
+const DEFAULT_RECOMPUTE_PHASES = {
+  group1: false,
+  group2: false,
+  semi1: false,
+  semi2: false,
+  thirdPlace: false,
+  final: false,
+}
+
 function Admin() {
   const [mrmData, setMrmData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [authChecked, setAuthChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [discordUser, setDiscordUser] = useState(null)
+  const [recomputePhases, setRecomputePhases] = useState(DEFAULT_RECOMPUTE_PHASES)
 
   useEffect(() => {
     let cancelled = false
@@ -128,6 +147,16 @@ function Admin() {
     const formDataObj = Object.fromEntries(new FormData(event.currentTarget).entries())
     const payload = buildBracketPayload(formDataObj)
     await postJson('/api/tournament/mrm/bracket', payload, 'Erreur envoi bracket')
+  }
+
+  const handleRecomputeSubmit = async (event) => {
+    event.preventDefault()
+    if (!window.confirm('Lancer le recompute des scores ?')) return
+    await postJson('/api/tournament/mrm/score/recompute', recomputePhases, 'Erreur recompute scores')
+  }
+
+  const toggleRecomputePhase = (key) => {
+    setRecomputePhases((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
   return (
@@ -275,6 +304,22 @@ function Admin() {
             </div>
             <input type="number" min="0" max="3" id="player2-final-score" name="player2-final-score" placeholder='0' defaultValue={bracket?.final[1]?.score ?? '0'}></input>
           </div>
+          <button type="submit">Valider</button>
+        </form>
+      </div>
+
+      <div className="admin-recompute-section">
+        <form onSubmit={handleRecomputeSubmit} className="admin-recompute-form">
+          {RECOMPUTE_PHASES.map(({ key, label }) => (
+            <label key={key} className="admin-recompute-label">
+              <input
+                type="checkbox"
+                checked={recomputePhases[key]}
+                onChange={() => toggleRecomputePhase(key)}
+              />
+              {label}
+            </label>
+          ))}
           <button type="submit">Valider</button>
         </form>
       </div>
