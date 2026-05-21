@@ -290,7 +290,7 @@ function Mrm() {
               <div className="rules-panel-body">
                 <div className="rules-row">
                   <i className="bi bi-intersect rules-icon" />
-                  <span>Le premier de chaque groupe affronte le second du groupe suivant en demi-finale lors d'un <span className="rules-highlight">BO3</span> (pas de seed type en double par match) à partir de <span className="rules-highlight">14h</span></span>
+                  <span>Le premier de chaque groupe affronte le second du groupe suivant en demi-finale lors d'un <span className="rules-highlight">BO3</span> (pas de seed type en double par match) à partir de <span className="rules-highlight">15h</span></span>
                 </div>
                 <div className="rules-row">
                   <i className="bi bi-people-fill rules-icon" />
