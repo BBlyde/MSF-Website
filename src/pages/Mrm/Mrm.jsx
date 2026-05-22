@@ -43,6 +43,21 @@ function Mrm() {
       .then((data) => setMrmData(data))
       .catch((err) => console.error('Erreur chargement données MRM', err))
       .finally(() => setLoading(false))
+
+    const ws = new WebSocket('wss://back.mcsr-game.com/ws/tournament')
+
+    ws.onopen = () => console.log('WebSocket connectée')
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      setMrmData(data)
+    }
+
+    ws.onerror = (err) => console.error('WebSocket erreur MRM', err)
+
+    return () => {
+      ws.close()
+    }
   }, [])
 
   const group1 = [...(mrmData?.group1 ?? [])].sort((a, b) => Number(b.total) - Number(a.total))
