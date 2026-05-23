@@ -378,6 +378,15 @@ function minimalScoreFromWinnerPid(winnerPid, pid0, pid1, max) {
   return [0, 0]
 }
 
+/** Réordonne [a,b] si les joueurs affichés (slot0, slot1) ne sont pas dans le même ordre que (from0, from1). */
+function reorderPairScoreForSlots(score, from0, from1, slot0, slot1) {
+  if (!Array.isArray(score) || score.length !== 2) return [0, 0]
+  if (slot0 == null || slot1 == null) return score
+  if (from0 === slot0 && from1 === slot1) return score
+  if (from0 === slot1 && from1 === slot0) return [score[1], score[0]]
+  return score
+}
+
 function mcHeadUrl(uuid) {
   if (uuid != null && String(uuid).trim() !== '') {
     return `https://mc-heads.net/avatar/${uuid}/48`
@@ -797,6 +806,7 @@ function MrmPrediction() {
 
   /** Demi scorée → vainqueur officiel (recompute) pilote finale / petite finale, pas le prono verrouillé. */
   const effectiveSemi1WinnerPid = useMemo(() => {
+    if (readOnly) return semi1Winner
     if (!semi1ScoredForBracket) return semi1Winner
     return (
       resolveOfficialWinnerPid(
@@ -812,6 +822,7 @@ function MrmPrediction() {
       semi1Winner
     )
   }, [
+    readOnly,
     semi1ScoredForBracket,
     semi1Winner,
     officialInfo?.semi1Winner,
@@ -822,6 +833,7 @@ function MrmPrediction() {
   ])
 
   const effectiveSemi2WinnerPid = useMemo(() => {
+    if (readOnly) return semi2Winner
     if (!semi2ScoredForBracket) return semi2Winner
     return (
       resolveOfficialWinnerPid(
@@ -837,6 +849,7 @@ function MrmPrediction() {
       semi2Winner
     )
   }, [
+    readOnly,
     semi2ScoredForBracket,
     semi2Winner,
     officialInfo?.semi2Winner,
@@ -976,6 +989,10 @@ function MrmPrediction() {
     if (!groupsLoaded) return
     if (readOnly) {
       if (!viewDiscordId) return
+      semi1PairKeyRef.current = ''
+      semi2PairKeyRef.current = ''
+      thirdPairKeyRef.current = ''
+      finalPairKeyRef.current = ''
     } else if (!authChecked) {
       return
     }
@@ -1103,20 +1120,43 @@ function MrmPrediction() {
             )
             const thirdPlaceWinnerRaw = pred.thirdPlaceWinner ?? pred.petiteFinaleWinner ?? pred.smallFinalWinner ?? null
             const tpResolved = resolveWinnerPid(thirdPlaceWinnerRaw, pfMatch, hydrateMap)
-            const scThird =
+            const scThirdRaw =
               parseSavedPairScore(pred.thirdPlaceScore ?? pred.petiteFinaleScore, 2) ??
               minimalScoreFromWinnerPid(tpResolved, pfMatch[0], pfMatch[1], 2)
-            setThirdPlaceScore(scThird)
-            const finalists = [w1, w2].filter(Boolean)
+            const pfDisplay = resolvePlayoffMatchIds(
+              buildBracketSlotPair(
+                tournamentBracket?.lower,
+                0,
+                1,
+                matchLoserId(s1, readOnly ? w1Pred : w1),
+                matchLoserId(s2, readOnly ? w2Pred : w2),
+                hydrateMap,
+              ),
+              matchLoserId(s1, readOnly ? w1Pred : w1),
+              matchLoserId(s2, readOnly ? w2Pred : w2),
+            )
+            setThirdPlaceScore(
+              reorderPairScoreForSlots(scThirdRaw, pfMatch[0], pfMatch[1], pfDisplay[0], pfDisplay[1]),
+            )
+            const finalists = readOnly ? [w1Pred, w2Pred].filter(Boolean) : [w1, w2].filter(Boolean)
             const f0 = finalists[0] ?? null
             const f1 = finalists[1] ?? null
+            const finalDisplay = readOnly
+              ? resolvePlayoffMatchIds(
+                  buildBracketSlotPair(tournamentBracket?.final, 0, 1, f0, f1, hydrateMap),
+                  f0,
+                  f1,
+                )
+              : [f0, f1]
             const fwResolved =
               pred.finalWinner && finalists.length === 2 && finalists.includes(pred.finalWinner)
                 ? pred.finalWinner
                 : null
-            const scFinal =
+            const scFinalRaw =
               parseSavedPairScore(pred.finalScore, 3) ?? minimalScoreFromWinnerPid(fwResolved, f0, f1, 3)
-            setFinalScore(scFinal)
+            setFinalScore(
+              reorderPairScoreForSlots(scFinalRaw, f0, f1, finalDisplay[0], finalDisplay[1]),
+            )
           } else {
             setOrder1(defaultOrder1)
             setOrder2(defaultOrder2)
@@ -1150,7 +1190,7 @@ function MrmPrediction() {
   }, [authChecked, groupsLoaded, discordUser, g1, g2, tournamentBracket, readOnly, viewDiscordId])
 
   useEffect(() => {
-    if (!hydrated) return
+    if (!hydrated || readOnly) return
     const k = `${semi1MatchIds[0] ?? ''}|${semi1MatchIds[1] ?? ''}`
     if (semi1PairKeyRef.current === '') {
       semi1PairKeyRef.current = k
@@ -1160,10 +1200,10 @@ function MrmPrediction() {
       semi1PairKeyRef.current = k
       setSemi1Score([0, 0])
     }
-  }, [hydrated, semi1MatchIds[0], semi1MatchIds[1]])
+  }, [hydrated, readOnly, semi1MatchIds[0], semi1MatchIds[1]])
 
   useEffect(() => {
-    if (!hydrated) return
+    if (!hydrated || readOnly) return
     const k = `${semi2MatchIds[0] ?? ''}|${semi2MatchIds[1] ?? ''}`
     if (semi2PairKeyRef.current === '') {
       semi2PairKeyRef.current = k
@@ -1173,10 +1213,10 @@ function MrmPrediction() {
       semi2PairKeyRef.current = k
       setSemi2Score([0, 0])
     }
-  }, [hydrated, semi2MatchIds[0], semi2MatchIds[1]])
+  }, [hydrated, readOnly, semi2MatchIds[0], semi2MatchIds[1]])
 
   useEffect(() => {
-    if (!hydrated) return
+    if (!hydrated || readOnly) return
     const k = `${petiteFinaleMatchIds[0] ?? ''}|${petiteFinaleMatchIds[1] ?? ''}`
     if (thirdPairKeyRef.current === '') {
       thirdPairKeyRef.current = k
@@ -1186,10 +1226,10 @@ function MrmPrediction() {
       thirdPairKeyRef.current = k
       setThirdPlaceScore([0, 0])
     }
-  }, [hydrated, petiteFinaleMatchIds[0], petiteFinaleMatchIds[1]])
+  }, [hydrated, readOnly, petiteFinaleMatchIds[0], petiteFinaleMatchIds[1]])
 
   useEffect(() => {
-    if (!hydrated) return
+    if (!hydrated || readOnly) return
     const k = `${finalistIds[0] ?? ''}|${finalistIds[1] ?? ''}`
     if (finalPairKeyRef.current === '') {
       finalPairKeyRef.current = k
@@ -1199,7 +1239,7 @@ function MrmPrediction() {
       finalPairKeyRef.current = k
       setFinalScore([0, 0])
     }
-  }, [hydrated, finalistIds[0], finalistIds[1]])
+  }, [hydrated, readOnly, finalistIds[0], finalistIds[1]])
 
   /** Après GET + effets de réconciliation : figer la baseline sans POST (état lu après le prochain tick). */
   useEffect(() => {
@@ -1427,9 +1467,9 @@ function MrmPrediction() {
 
       {readOnly && viewLoadError === 'not_found' ? (
         <div className="mrm-prediction-auth-banner mrm-prediction-auth-banner--locks" role="status">
-          <span>Ce joueur n&apos;est pas dans le classement ou n&apos;a pas de pronostics.</span>
+          <span>Ce joueur n&apos;est pas dans le classement ou n&apos;a pas de pronostiques.</span>
           <Link className="mrm-prediction-auth-link mrm-prediction-view-back-link" to="/prediction/mrm">
-            Mes pronostics
+            Mes pronostiques
           </Link>
         </div>
       ) : null}
@@ -1450,20 +1490,20 @@ function MrmPrediction() {
               }}
             />
             <span>
-              Pronostics de {viewProfileLabel}
+              Pronostiques de {viewProfileLabel}
               {typeof viewProfile?.points === 'number' ? ` · ${viewProfile.points} pts` : ''}
             </span>
           </div>
           {!viewHasPrediction ? (
-            <span className="mrm-prediction-view-empty">Aucun pronostic enregistré pour l&apos;instant.</span>
+            <span className="mrm-prediction-view-empty">Aucun pronostique enregistré pour l&apos;instant.</span>
           ) : null}
         </div>
       ) : null}
       {readOnly && viewLoadError === 'unavailable' ? (
         <div className="mrm-prediction-auth-banner mrm-prediction-auth-banner--locks" role="status">
-          <span>Impossible de charger les pronostics de ce joueur.</span>
+          <span>Impossible de charger les pronostiques de ce joueur.</span>
           <Link className="mrm-prediction-view-back-link" to="/prediction/mrm">
-            Mes pronostics
+            Mes pronostiques
           </Link>
         </div>
       ) : null}
@@ -1491,7 +1531,7 @@ function MrmPrediction() {
       ) : null}
 
       <div className="mrm-prediction-content-wrap">
-        <aside className="mrm-prediction-scoring-shell" aria-label="Barème des pronostics">
+        <aside className="mrm-prediction-scoring-shell" aria-label="Barème des pronostiques">
           <button
             type="button"
             className="mrm-prediction-scoring-toggle"
@@ -1537,8 +1577,8 @@ function MrmPrediction() {
             aria-controls="mrm-prediction-leaderboard-panel"
             aria-label={
               isLeaderboardOpen
-                ? 'Masquer le classement des pronostics'
-                : 'Afficher le classement des pronostics'
+                ? 'Masquer le classement des pronostiques'
+                : 'Afficher le classement des pronostiques'
             }
             onClick={() => setIsLeaderboardOpen((open) => !open)}
           >

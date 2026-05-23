@@ -42,7 +42,7 @@ export default function MrmPronosLeaderboard({ highlightUserId = null }) {
   }, [])
 
   return (
-    <aside className="mrm-prediction-leaderboard" aria-label="Classement des pronostics">
+    <aside className="mrm-prediction-leaderboard" aria-label="Classement des pronostiques">
       <div className="mrm-prediction-leaderboard-header">CLASSEMENT PRONOS</div>
       <div className="mrm-prediction-leaderboard-body">
         {loading ? (
@@ -85,7 +85,7 @@ export default function MrmPronosLeaderboard({ highlightUserId = null }) {
                       .filter(Boolean)
                       .join(' ')}
                     aria-current={isActive ? 'page' : undefined}
-                    title={`Voir les pronostics de ${name}`}
+                    title={`Voir les pronostiques de ${name}`}
                   >
                     <span className="mrm-prediction-leaderboard-rank">{index + 1}</span>
                     <img
