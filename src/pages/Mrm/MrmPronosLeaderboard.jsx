@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { discordAvatarUrl, discordDisplayName } from '../../utils/discordUser'
 import { predictionApiUrl } from '../../utils/predictionApi'
 
@@ -62,31 +62,39 @@ export default function MrmPronosLeaderboard({ highlightUserId = null }) {
                 globalName: row.globalName,
               })
               const name = label || row.username || '—'
+              const profilePath = `/prediction/mrm/${encodeURIComponent(row.discordId)}`
+              const isActive = location.pathname === profilePath
               return (
-                <li
-                  key={`${row.discordId}-${index}`}
-                  className={['mrm-prediction-leaderboard-row', isMe ? 'mrm-prediction-leaderboard-row--me' : '']
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <span className="mrm-prediction-leaderboard-rank">{index + 1}</span>
-                  <img
-                    className="mrm-prediction-leaderboard-avatar"
-                    src={discordAvatarUrl(row.discordId, row.avatar ?? null)}
-                    alt=""
-                    width={32}
-                    height={32}
-                    onError={(e) => {
-                      const fallback = discordAvatarUrl(row.discordId, null)
-                      if (e.currentTarget.src !== fallback) {
-                        e.currentTarget.src = fallback
-                      }
-                    }}
-                  />
-                  <span className="mrm-prediction-leaderboard-name" title={name}>
-                    {name}
-                  </span>
-                  <span className="mrm-prediction-leaderboard-points">{row.points}</span>
+                <li key={`${row.discordId}-${index}`}>
+                  <Link
+                    to={profilePath}
+                    className={[
+                      'mrm-prediction-leaderboard-row',
+                      isMe ? 'mrm-prediction-leaderboard-row--me' : '',
+                      isActive ? 'mrm-prediction-leaderboard-row--active' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    aria-current={isActive ? 'page' : undefined}
+                    title={`Voir les pronostics de ${name}`}
+                  >
+                    <span className="mrm-prediction-leaderboard-rank">{index + 1}</span>
+                    <img
+                      className="mrm-prediction-leaderboard-avatar"
+                      src={discordAvatarUrl(row.discordId, row.avatar ?? null)}
+                      alt=""
+                      width={32}
+                      height={32}
+                      onError={(e) => {
+                        const fallback = discordAvatarUrl(row.discordId, null)
+                        if (e.currentTarget.src !== fallback) {
+                          e.currentTarget.src = fallback
+                        }
+                      }}
+                    />
+                    <span className="mrm-prediction-leaderboard-name">{name}</span>
+                    <span className="mrm-prediction-leaderboard-points">{row.points}</span>
+                  </Link>
                 </li>
               )
             })}

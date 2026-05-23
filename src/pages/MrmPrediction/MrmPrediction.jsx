@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   closestCenter,
   DndContext,
@@ -20,6 +20,7 @@ import { CSS } from '@dnd-kit/utilities'
 import './MrmPrediction.css'
 import { reconcileOrder } from '../Mrm/mrmPredictionStorage'
 import MrmPronosLeaderboard from '../Mrm/MrmPronosLeaderboard'
+import { discordDisplayName } from '../../utils/discordUser'
 import { predictionApiUrl } from '../../utils/predictionApi'
 
 const mrmPredictionApiUrl = predictionApiUrl('/prediction/mrm')
@@ -113,6 +114,42 @@ function normalizeOfficialState(rawOfficial) {
     thirdPlaceWinner: data.thirdPlaceWinner ?? null,
     finalWinner: data.finalWinner ?? null,
   }
+}
+
+function applyPredictionMetaFromApi(data, setFinishedInfo, setOfficialInfo, setLockInfo) {
+  const finished = normalizeFinishedState(data?.finished ?? data?.scoringPhases)
+  const official = normalizeOfficialState(data?.official)
+  const rawLocks = data?.locks && typeof data.locks === 'object' ? data.locks : {}
+  const serverNowIso = typeof data?.serverNow === 'string' ? data.serverNow : null
+  setFinishedInfo(finished)
+  setOfficialInfo(official)
+  setLockInfo({
+    global: normalizeLockEntry(rawLocks.global, data?.locked === true, data?.lockAt, serverNowIso),
+    group1: normalizeLockEntry(
+      rawLocks.group1,
+      data?.lockedGroup1 === true || data?.group1Locked === true || finished.group1,
+      data?.lockAtGroup1 ?? data?.group1LockAt,
+      serverNowIso,
+    ),
+    group2: normalizeLockEntry(
+      rawLocks.group2,
+      data?.lockedGroup2 === true || data?.group2Locked === true || finished.group2,
+      data?.lockAtGroup2 ?? data?.group2LockAt,
+      serverNowIso,
+    ),
+    playoffs: normalizeLockEntry(
+      rawLocks.playoffs,
+      data?.lockedPlayoffs === true || data?.playoffsLocked === true,
+      data?.lockAtPlayoffs ?? data?.playoffsLockAt,
+      serverNowIso,
+    ),
+    semi1: normalizeLockEntry(rawLocks.semi1, finished.semi1, null, serverNowIso),
+    semi2: normalizeLockEntry(rawLocks.semi2, finished.semi2, null, serverNowIso),
+    thirdPlace: normalizeLockEntry(rawLocks.thirdPlace, finished.thirdPlace, null, serverNowIso),
+    final: normalizeLockEntry(rawLocks.final ?? rawLocks.finalPhase, finished.final, null, serverNowIso),
+    serverNow: serverNowIso,
+  })
+  return { finished, official }
 }
 
 function pidFromPlayerIdentity(playerMap, idOrUuid, name) {
@@ -587,12 +624,19 @@ function BracketScoredPlayerRow({
 
 function MrmPrediction() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { discordId: viewDiscordIdParam } = useParams()
+  const viewDiscordId = viewDiscordIdParam?.trim() || null
+  const readOnly = viewDiscordId != null
   const [g1, setG1] = useState([])
   const [g2, setG2] = useState([])
   const [groupsLoaded, setGroupsLoaded] = useState(false)
 
   const [discordUser, setDiscordUser] = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
+  const [viewProfile, setViewProfile] = useState(null)
+  const [viewLoadError, setViewLoadError] = useState(null)
+  const [viewHasPrediction, setViewHasPrediction] = useState(false)
 
   const [order1, setOrder1] = useState([])
   const [order2, setOrder2] = useState([])
@@ -626,8 +670,9 @@ function MrmPrediction() {
   const isThirdPlaceLocked = isLegacyPlayoffsLocked || lockInfo.thirdPlace.locked === true || finishedInfo.thirdPlace
   const isFinalLocked = isLegacyPlayoffsLocked || lockInfo.final.locked === true || finishedInfo.final
   const isAnyPlayoffPhaseLocked = isSemi1Locked || isSemi2Locked || isThirdPlaceLocked || isFinalLocked
-  const groupsStatusText =
-    isGroup1Locked && isGroup2Locked
+  const groupsStatusText = readOnly
+    ? 'Classement en lecture seule'
+    : isGroup1Locked && isGroup2Locked
       ? 'Les groupes sont verrouillés : le classement n’est plus modifiable.'
       : isGroup1Locked
         ? 'Le groupe 1 est verrouillé ; seul le groupe 2 reste modifiable.'
@@ -637,14 +682,26 @@ function MrmPrediction() {
 
   const globalLockAtLabel = useMemo(() => formatLockDateLabel(lockInfo.global.lockAt), [lockInfo.global.lockAt])
 
-  const canEditGroup1 = !isGroup1Locked && authChecked && discordUser != null && hydrated
-  const canEditGroup2 = !isGroup2Locked && authChecked && discordUser != null && hydrated
-  const canEditBracketBase = authChecked && discordUser != null && hydrated
+  const viewProfileLabel = useMemo(() => {
+    if (!viewProfile) return null
+    return (
+      discordDisplayName({
+        username: viewProfile.username,
+        globalName: viewProfile.globalName,
+      }) ||
+      viewProfile.username ||
+      viewProfile.discordId
+    )
+  }, [viewProfile])
+
+  const canEditGroup1 = !readOnly && !isGroup1Locked && authChecked && discordUser != null && hydrated
+  const canEditGroup2 = !readOnly && !isGroup2Locked && authChecked && discordUser != null && hydrated
+  const canEditBracketBase = !readOnly && authChecked && discordUser != null && hydrated
   const canEditSemi1 = canEditBracketBase && !isSemi1Locked
   const canEditSemi2 = canEditBracketBase && !isSemi2Locked
   const canEditThirdPlace = canEditBracketBase && !isThirdPlaceLocked
   const canEditFinal = canEditBracketBase && !isFinalLocked
-  const canSyncPrediction = authChecked && discordUser != null && hydrated
+  const canSyncPrediction = !readOnly && authChecked && discordUser != null && hydrated
 
   const playerMap = useMemo(() => {
     const m = new Map()
@@ -900,7 +957,15 @@ function MrmPrediction() {
   }, [location.pathname])
 
   useEffect(() => {
-    if (!authChecked || !groupsLoaded) return
+    if (!readOnly || !authChecked || !discordUser?.id || !viewDiscordId) return
+    if (discordUser.id === viewDiscordId) {
+      navigate('/prediction/mrm', { replace: true })
+    }
+  }, [readOnly, authChecked, discordUser, viewDiscordId, navigate])
+
+  useEffect(() => {
+    if (!groupsLoaded) return
+    if (!readOnly && !authChecked) return
 
     baselinePredictionPayloadRef.current = null
     captureBaselineAfterHydrateRef.current = false
@@ -909,50 +974,63 @@ function MrmPrediction() {
     thirdPairKeyRef.current = ''
     finalPairKeyRef.current = ''
     setHydrated(false)
+    setViewLoadError(null)
+    setViewProfile(null)
+    setViewHasPrediction(false)
     let cancelled = false
       ; (async () => {
         const defaultOrder1 = Array.from({ length: g1.length }, (_, i) => i)
         const defaultOrder2 = Array.from({ length: g2.length }, (_, i) => i)
 
         try {
-          const res = await fetch(mrmPredictionApiUrl, { credentials: 'include' })
+          const predictionFetchUrl = readOnly
+            ? predictionApiUrl(`prediction/mrm/users/${encodeURIComponent(viewDiscordId)}`)
+            : mrmPredictionApiUrl
+          const res = await fetch(
+            predictionFetchUrl,
+            readOnly ? undefined : { credentials: 'include' },
+          )
           const data = await res.json().catch(() => ({}))
-          const finished = normalizeFinishedState(data?.finished ?? data?.scoringPhases)
-          const official = normalizeOfficialState(data?.official)
-          if (!cancelled) {
-            const rawLocks = data?.locks && typeof data.locks === 'object' ? data.locks : {}
-            const serverNowIso = typeof data?.serverNow === 'string' ? data.serverNow : null
-            setFinishedInfo(finished)
-            setOfficialInfo(official)
-            setLockInfo({
-              global: normalizeLockEntry(rawLocks.global, data?.locked === true, data?.lockAt, serverNowIso),
-              group1: normalizeLockEntry(
-                rawLocks.group1,
-                data?.lockedGroup1 === true || data?.group1Locked === true || finished.group1,
-                data?.lockAtGroup1 ?? data?.group1LockAt,
-                serverNowIso,
-              ),
-              group2: normalizeLockEntry(
-                rawLocks.group2,
-                data?.lockedGroup2 === true || data?.group2Locked === true || finished.group2,
-                data?.lockAtGroup2 ?? data?.group2LockAt,
-                serverNowIso,
-              ),
-              playoffs: normalizeLockEntry(
-                rawLocks.playoffs,
-                data?.lockedPlayoffs === true || data?.playoffsLocked === true,
-                data?.lockAtPlayoffs ?? data?.playoffsLockAt,
-                serverNowIso,
-              ),
-              semi1: normalizeLockEntry(rawLocks.semi1, finished.semi1, null, serverNowIso),
-              semi2: normalizeLockEntry(rawLocks.semi2, finished.semi2, null, serverNowIso),
-              thirdPlace: normalizeLockEntry(rawLocks.thirdPlace, finished.thirdPlace, null, serverNowIso),
-              final: normalizeLockEntry(rawLocks.final ?? rawLocks.finalPhase, finished.final, null, serverNowIso),
-              serverNow: serverNowIso,
-            })
+          if (readOnly && res.status === 404) {
+            if (!cancelled) {
+              setViewLoadError('not_found')
+              setOrder1(defaultOrder1)
+              setOrder2(defaultOrder2)
+              setSemi1Score([0, 0])
+              setSemi2Score([0, 0])
+              setThirdPlaceScore([0, 0])
+              setFinalScore([0, 0])
+              setHydrated(true)
+            }
+            return
           }
-          const pred = discordUser && data?.prediction && typeof data.prediction === 'object' ? data.prediction : null
+          if (readOnly && !res.ok) {
+            if (!cancelled) {
+              setViewLoadError('unavailable')
+              setHydrated(true)
+            }
+            return
+          }
+          const { finished, official } = applyPredictionMetaFromApi(
+            data,
+            setFinishedInfo,
+            setOfficialInfo,
+            setLockInfo,
+          )
+          if (readOnly && data?.user && typeof data.user === 'object') {
+            if (!cancelled) setViewProfile(data.user)
+          }
+          const pred = readOnly
+            ? data?.prediction && typeof data.prediction === 'object'
+              ? data.prediction
+              : null
+            : discordUser && data?.prediction && typeof data.prediction === 'object'
+              ? data.prediction
+              : null
           if (cancelled) return
+          if (readOnly) {
+            setViewHasPrediction(pred != null)
+          }
 
           if (pred) {
             const o1 = reconcileOrder(g1.length, pred.order1)
@@ -1053,7 +1131,19 @@ function MrmPrediction() {
     return () => {
       cancelled = true
     }
-  }, [authChecked, groupsLoaded, discordUser, location.pathname, g1.length, g2.length, g1, g2, tournamentBracket])
+  }, [
+    authChecked,
+    groupsLoaded,
+    discordUser,
+    location.pathname,
+    g1.length,
+    g2.length,
+    g1,
+    g2,
+    tournamentBracket,
+    readOnly,
+    viewDiscordId,
+  ])
 
   useEffect(() => {
     if (!hydrated) return
@@ -1331,7 +1421,40 @@ function MrmPrediction() {
 
       <div className="section-divider" />
 
-      {authChecked && !discordUser ? (
+      {readOnly && viewLoadError === 'not_found' ? (
+        <div className="mrm-prediction-auth-banner mrm-prediction-auth-banner--locks" role="status">
+          <span>Ce joueur n&apos;est pas dans le classement ou n&apos;a pas de pronostics.</span>
+          <Link className="mrm-prediction-auth-link mrm-prediction-view-back-link" to="/prediction/mrm">
+            Mes pronostics
+          </Link>
+        </div>
+      ) : null}
+      {readOnly && viewLoadError !== 'not_found' && viewProfileLabel ? (
+        <div className="mrm-prediction-view-banner" role="status">
+          <Link className="mrm-prediction-view-back-link" to="/prediction/mrm">
+            ← Mes pronostics
+          </Link>
+          <span>
+            Pronostics de {viewProfileLabel}
+            {typeof viewProfile?.points === 'number' ? ` · ${viewProfile.points} pts` : ''}
+            {' · '}
+            lecture seule
+          </span>
+          {!viewHasPrediction ? (
+            <span className="mrm-prediction-view-empty">Aucun pronostic enregistré pour l&apos;instant.</span>
+          ) : null}
+        </div>
+      ) : null}
+      {readOnly && viewLoadError === 'unavailable' ? (
+        <div className="mrm-prediction-auth-banner mrm-prediction-auth-banner--locks" role="status">
+          <span>Impossible de charger les pronostics de ce joueur.</span>
+          <Link className="mrm-prediction-view-back-link" to="/prediction/mrm">
+            Mes pronostics
+          </Link>
+        </div>
+      ) : null}
+
+      {authChecked && !discordUser && !readOnly ? (
         <div className="mrm-prediction-auth-banner" role="status">
           <span>
             Connecte-toi pour enregistrer et modifier tes prédictions
@@ -1416,7 +1539,7 @@ function MrmPrediction() {
               .filter(Boolean)
               .join(' ')}
           >
-            <MrmPronosLeaderboard highlightUserId={discordUser?.id ?? null} />
+            <MrmPronosLeaderboard highlightUserId={readOnly ? viewDiscordId : (discordUser?.id ?? null)} />
           </div>
         </aside>
         <div className="container">
