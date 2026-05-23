@@ -1,9 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { discordAvatarUrl, discordDisplayName } from '../../utils/discordUser'
 import { predictionApiUrl } from '../../utils/predictionApi'
 
 const mrmPredictionLeaderboardUrl = predictionApiUrl('/prediction/mrm/leaderboard')
+
+/** Classement compétition : 1, 2, 2, 4… (égalité = même rang, on saute les places suivantes). */
+function competitionRanks(rows) {
+  if (!rows.length) return []
+  const ranks = [1]
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i]?.points === rows[i - 1]?.points) ranks.push(ranks[i - 1])
+    else ranks.push(i + 1)
+  }
+  return ranks
+}
 
 /**
  * @param {{ highlightUserId?: string | null }} props
@@ -13,6 +24,7 @@ export default function MrmPronosLeaderboard({ highlightUserId = null }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const ranks = useMemo(() => competitionRanks(rows), [rows])
 
   useEffect(() => {
     let cancelled = false
@@ -87,7 +99,7 @@ export default function MrmPronosLeaderboard({ highlightUserId = null }) {
                     aria-current={isActive ? 'page' : undefined}
                     title={`Voir les pronostiques de ${name}`}
                   >
-                    <span className="mrm-prediction-leaderboard-rank">{index + 1}</span>
+                    <span className="mrm-prediction-leaderboard-rank">{ranks[index]}</span>
                     <img
                       className="mrm-prediction-leaderboard-avatar"
                       src={discordAvatarUrl(row.discordId, row.avatar ?? null)}
