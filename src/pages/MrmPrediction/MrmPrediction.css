@@ -483,6 +483,17 @@
     font-weight: 600;
 }
 
+.mrm-prediction-leaderboard-row .mrm-prediction-leaderboard-name {
+    text-decoration: none;
+}
+
+.mrm-prediction-leaderboard-row:hover .mrm-prediction-leaderboard-name {
+    color: #fff;
+    text-decoration: underline;
+    text-decoration-color: #86CE34;
+    text-underline-offset: 2px;
+}
+
 .mrm-prediction-leaderboard-points {
     font-weight: 700;
     color: #fff;
