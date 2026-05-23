@@ -31,6 +31,7 @@ function App() {
           <Route path="/rsg" element={<LeaderboardRsg />} />
           <Route path="/ranked" element={<LeaderboardRanked />} />
           <Route path="/mrm" element={<Mrm />} />
+          <Route path="/prediction/mrm/:discordId" element={<MrmPrediction />} />
           <Route path="/prediction/mrm" element={<MrmPrediction />} />
           <Route path="/tournament" element={<Tournament />} />
           <Route path="/admin" element={<Admin />} />
