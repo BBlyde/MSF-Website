@@ -39,7 +39,7 @@ export default function MrmPronosLeaderboard({ highlightUserId = null }) {
     return () => {
       cancelled = true
     }
-  }, [location.pathname])
+  }, [])
 
   return (
     <aside className="mrm-prediction-leaderboard" aria-label="Classement des pronostics">
@@ -68,6 +68,15 @@ export default function MrmPronosLeaderboard({ highlightUserId = null }) {
                 <li key={`${row.discordId}-${index}`}>
                   <Link
                     to={profilePath}
+                    state={{
+                      viewProfile: {
+                        discordId: row.discordId,
+                        username: row.username,
+                        globalName: row.globalName,
+                        points: row.points,
+                        avatar: row.avatar,
+                      },
+                    }}
                     className={[
                       'mrm-prediction-leaderboard-row',
                       isMe ? 'mrm-prediction-leaderboard-row--me' : '',

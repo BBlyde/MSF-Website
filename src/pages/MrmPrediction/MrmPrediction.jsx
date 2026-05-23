@@ -20,7 +20,7 @@ import { CSS } from '@dnd-kit/utilities'
 import './MrmPrediction.css'
 import { reconcileOrder } from '../Mrm/mrmPredictionStorage'
 import MrmPronosLeaderboard from '../Mrm/MrmPronosLeaderboard'
-import { discordDisplayName } from '../../utils/discordUser'
+import { discordAvatarUrl, discordDisplayName } from '../../utils/discordUser'
 import { predictionApiUrl } from '../../utils/predictionApi'
 
 const mrmPredictionApiUrl = predictionApiUrl('/prediction/mrm')
@@ -954,7 +954,16 @@ function MrmPrediction() {
     return () => {
       cancelled = true
     }
-  }, [location.pathname])
+  }, [])
+
+  useEffect(() => {
+    if (!readOnly || !viewDiscordId) return
+    const navProfile = location.state?.viewProfile
+    if (navProfile && String(navProfile.discordId) === viewDiscordId) {
+      setViewProfile(navProfile)
+      setViewLoadError(null)
+    }
+  }, [readOnly, viewDiscordId, location.state])
 
   useEffect(() => {
     if (!readOnly || !authChecked || !discordUser?.id || !viewDiscordId) return
@@ -965,18 +974,25 @@ function MrmPrediction() {
 
   useEffect(() => {
     if (!groupsLoaded) return
-    if (!readOnly && !authChecked) return
+    if (readOnly) {
+      if (!viewDiscordId) return
+    } else if (!authChecked) {
+      return
+    }
 
-    baselinePredictionPayloadRef.current = null
-    captureBaselineAfterHydrateRef.current = false
-    semi1PairKeyRef.current = ''
-    semi2PairKeyRef.current = ''
-    thirdPairKeyRef.current = ''
-    finalPairKeyRef.current = ''
-    setHydrated(false)
-    setViewLoadError(null)
-    setViewProfile(null)
-    setViewHasPrediction(false)
+    if (!readOnly) {
+      baselinePredictionPayloadRef.current = null
+      captureBaselineAfterHydrateRef.current = false
+      semi1PairKeyRef.current = ''
+      semi2PairKeyRef.current = ''
+      thirdPairKeyRef.current = ''
+      finalPairKeyRef.current = ''
+      setHydrated(false)
+      setViewLoadError(null)
+      setViewProfile(null)
+      setViewHasPrediction(false)
+    }
+
     let cancelled = false
       ; (async () => {
         const defaultOrder1 = Array.from({ length: g1.length }, (_, i) => i)
@@ -1131,19 +1147,7 @@ function MrmPrediction() {
     return () => {
       cancelled = true
     }
-  }, [
-    authChecked,
-    groupsLoaded,
-    discordUser,
-    location.pathname,
-    g1.length,
-    g2.length,
-    g1,
-    g2,
-    tournamentBracket,
-    readOnly,
-    viewDiscordId,
-  ])
+  }, [authChecked, groupsLoaded, discordUser, g1, g2, tournamentBracket, readOnly, viewDiscordId])
 
   useEffect(() => {
     if (!hydrated) return
@@ -1429,12 +1433,27 @@ function MrmPrediction() {
           </Link>
         </div>
       ) : null}
-      {readOnly && viewLoadError !== 'not_found' && viewProfileLabel ? (
+      {readOnly && viewLoadError !== 'not_found' && viewProfile ? (
         <div className="mrm-prediction-view-banner" role="status">
-          <span>
-            Pronostics de {viewProfileLabel}
-            {typeof viewProfile?.points === 'number' ? ` · ${viewProfile.points} pts` : ''}
-          </span>
+          <div className="mrm-prediction-view-banner-main">
+            <img
+              className="mrm-prediction-view-banner-avatar"
+              src={discordAvatarUrl(viewProfile.discordId, viewProfile.avatar ?? null)}
+              alt=""
+              width={40}
+              height={40}
+              onError={(e) => {
+                const fallback = discordAvatarUrl(viewProfile.discordId, null)
+                if (e.currentTarget.src !== fallback) {
+                  e.currentTarget.src = fallback
+                }
+              }}
+            />
+            <span>
+              Pronostics de {viewProfileLabel}
+              {typeof viewProfile?.points === 'number' ? ` · ${viewProfile.points} pts` : ''}
+            </span>
+          </div>
           {!viewHasPrediction ? (
             <span className="mrm-prediction-view-empty">Aucun pronostic enregistré pour l&apos;instant.</span>
           ) : null}

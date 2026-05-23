@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 import './App.css'
 import Header from './components/Header'
@@ -14,8 +14,16 @@ import Admin from './pages/Admin/Admin'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
+  const previousPathRef = useRef(pathname)
   useEffect(() => {
-    window.scrollTo(0, 0)
+    const previousPath = previousPathRef.current
+    previousPathRef.current = pathname
+    const isPlayerProfileSwitch =
+      /^\/prediction\/mrm\/[^/]+$/.test(pathname) &&
+      /^\/prediction\/mrm\/[^/]+$/.test(previousPath)
+    if (!isPlayerProfileSwitch) {
+      window.scrollTo(0, 0)
+    }
   }, [pathname])
   return null
 }
