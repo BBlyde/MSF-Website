@@ -1431,14 +1431,9 @@ function MrmPrediction() {
       ) : null}
       {readOnly && viewLoadError !== 'not_found' && viewProfileLabel ? (
         <div className="mrm-prediction-view-banner" role="status">
-          <Link className="mrm-prediction-view-back-link" to="/prediction/mrm">
-            ← Mes pronostics
-          </Link>
           <span>
             Pronostics de {viewProfileLabel}
             {typeof viewProfile?.points === 'number' ? ` · ${viewProfile.points} pts` : ''}
-            {' · '}
-            lecture seule
           </span>
           {!viewHasPrediction ? (
             <span className="mrm-prediction-view-empty">Aucun pronostic enregistré pour l&apos;instant.</span>
