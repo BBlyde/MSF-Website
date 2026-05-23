@@ -151,8 +151,7 @@ function winnerIdFromBracketSlots(slots, index0, index1, maxWins) {
   return null
 }
 
-function buildBracketSemiPair(bracket, index0, index1, fallbackPid0, fallbackPid1, playerMap) {
-  const slots = bracket?.semi
+function buildBracketSlotPair(slots, index0, index1, fallbackPid0, fallbackPid1, playerMap) {
   const slot0 = slots?.[index0]
   const slot1 = slots?.[index1]
   const pid0 =
@@ -169,6 +168,18 @@ function buildBracketSemiPair(bracket, index0, index1, fallbackPid0, fallbackPid
     player0: pid0 != null ? playerMap.get(pid0) ?? null : null,
     player1: pid1 != null ? playerMap.get(pid1) ?? null : null,
   }
+}
+
+function buildBracketSemiPair(bracket, index0, index1, fallbackPid0, fallbackPid1, playerMap) {
+  return buildBracketSlotPair(bracket?.semi, index0, index1, fallbackPid0, fallbackPid1, playerMap)
+}
+
+/** Pids du match : bracket admin (GET tournament) si les deux joueurs sont connus, sinon repli groupes. */
+function resolvePlayoffMatchIds(bracketPair, fallbackPid0, fallbackPid1) {
+  const a = bracketPair?.pid0 ?? null
+  const b = bracketPair?.pid1 ?? null
+  if (a != null && b != null) return [a, b]
+  return [fallbackPid0 ?? a, fallbackPid1 ?? b]
 }
 
 function resolveOfficialWinnerPid(rawWinner, pairIds, playerMap, bracketSlots, index0, index1, maxWins) {
@@ -652,15 +663,6 @@ function MrmPrediction() {
   const s1Ids = useMemo(() => semi1PairIds(order1, order2), [order1, order2])
   const s2Ids = useMemo(() => semi2PairIds(order1, order2), [order1, order2])
 
-  const semi1Winner = useMemo(
-    () => winnerPidFromBoNScores(semi1Score, 2, s1Ids[0], s1Ids[1]),
-    [semi1Score, s1Ids[0], s1Ids[1]],
-  )
-  const semi2Winner = useMemo(
-    () => winnerPidFromBoNScores(semi2Score, 2, s2Ids[0], s2Ids[1]),
-    [semi2Score, s2Ids[0], s2Ids[1]],
-  )
-
   const semi1BracketPair = useMemo(
     () =>
       buildBracketSemiPair(
@@ -687,32 +689,50 @@ function MrmPrediction() {
     [tournamentBracket, showPlayoffBracketMatchups, s2Ids, playerMap],
   )
 
+  const semi1MatchIds = useMemo(
+    () => resolvePlayoffMatchIds(semi1BracketPair, s1Ids[0], s1Ids[1]),
+    [semi1BracketPair, s1Ids],
+  )
+  const semi2MatchIds = useMemo(
+    () => resolvePlayoffMatchIds(semi2BracketPair, s2Ids[0], s2Ids[1]),
+    [semi2BracketPair, s2Ids],
+  )
+
+  const semi1Winner = useMemo(
+    () => winnerPidFromBoNScores(semi1Score, 2, semi1MatchIds[0], semi1MatchIds[1]),
+    [semi1Score, semi1MatchIds],
+  )
+  const semi2Winner = useMemo(
+    () => winnerPidFromBoNScores(semi2Score, 2, semi2MatchIds[0], semi2MatchIds[1]),
+    [semi2Score, semi2MatchIds],
+  )
+
   const tournamentSemi1WinnerPid = useMemo(
     () =>
       resolveOfficialWinnerPid(
         null,
-        [semi1BracketPair.pid0, semi1BracketPair.pid1].filter(Boolean),
+        semi1MatchIds.filter(Boolean),
         playerMap,
         tournamentBracket?.semi,
         0,
         1,
         2,
       ),
-    [tournamentBracket, semi1BracketPair, playerMap],
+    [tournamentBracket, semi1BracketPair, semi1MatchIds, playerMap],
   )
 
   const tournamentSemi2WinnerPid = useMemo(
     () =>
       resolveOfficialWinnerPid(
         null,
-        [semi2BracketPair.pid0, semi2BracketPair.pid1].filter(Boolean),
+        semi2MatchIds.filter(Boolean),
         playerMap,
         tournamentBracket?.semi,
         2,
         3,
         2,
       ),
-    [tournamentBracket, semi2BracketPair, playerMap],
+    [tournamentBracket, semi2BracketPair, semi2MatchIds, playerMap],
   )
 
   const semi1ScoredForBracket = isSemi1Locked && finishedInfo.semi1
@@ -724,7 +744,7 @@ function MrmPrediction() {
     return (
       resolveOfficialWinnerPid(
         officialInfo?.semi1Winner,
-        [semi1BracketPair.pid0, semi1BracketPair.pid1].filter(Boolean),
+        semi1MatchIds.filter(Boolean),
         playerMap,
         tournamentBracket?.semi,
         0,
@@ -738,7 +758,7 @@ function MrmPrediction() {
     semi1ScoredForBracket,
     semi1Winner,
     officialInfo?.semi1Winner,
-    semi1BracketPair,
+    semi1MatchIds,
     playerMap,
     tournamentBracket?.semi,
     tournamentSemi1WinnerPid,
@@ -749,7 +769,7 @@ function MrmPrediction() {
     return (
       resolveOfficialWinnerPid(
         officialInfo?.semi2Winner,
-        [semi2BracketPair.pid0, semi2BracketPair.pid1].filter(Boolean),
+        semi2MatchIds.filter(Boolean),
         playerMap,
         tournamentBracket?.semi,
         2,
@@ -763,7 +783,7 @@ function MrmPrediction() {
     semi2ScoredForBracket,
     semi2Winner,
     officialInfo?.semi2Winner,
-    semi2BracketPair,
+    semi2MatchIds,
     playerMap,
     tournamentBracket?.semi,
     tournamentSemi2WinnerPid,
@@ -788,15 +808,38 @@ function MrmPrediction() {
     [finalScore, finalistIds[0], finalistIds[1]],
   )
 
-  const petiteFinaleIds = useMemo(() => {
-    const loser1 = matchLoserId(s1Ids, effectiveSemi1WinnerPid)
-    const loser2 = matchLoserId(s2Ids, effectiveSemi2WinnerPid)
+  const petiteFinaleIdsFromSemis = useMemo(() => {
+    const loser1 = matchLoserId(semi1MatchIds, effectiveSemi1WinnerPid)
+    const loser2 = matchLoserId(semi2MatchIds, effectiveSemi2WinnerPid)
     return loser1 && loser2 ? [loser1, loser2] : [null, null]
-  }, [s1Ids, s2Ids, effectiveSemi1WinnerPid, effectiveSemi2WinnerPid])
+  }, [semi1MatchIds, semi2MatchIds, effectiveSemi1WinnerPid, effectiveSemi2WinnerPid])
+
+  const lowerBracketPair = useMemo(
+    () =>
+      buildBracketSlotPair(
+        tournamentBracket?.lower,
+        0,
+        1,
+        showPlayoffBracketMatchups ? petiteFinaleIdsFromSemis[0] : null,
+        showPlayoffBracketMatchups ? petiteFinaleIdsFromSemis[1] : null,
+        playerMap,
+      ),
+    [tournamentBracket?.lower, showPlayoffBracketMatchups, petiteFinaleIdsFromSemis, playerMap],
+  )
+
+  const petiteFinaleMatchIds = useMemo(
+    () =>
+      resolvePlayoffMatchIds(
+        lowerBracketPair,
+        petiteFinaleIdsFromSemis[0],
+        petiteFinaleIdsFromSemis[1],
+      ),
+    [lowerBracketPair, petiteFinaleIdsFromSemis],
+  )
 
   const thirdPlaceWinner = useMemo(
-    () => winnerPidFromBoNScores(thirdPlaceScore, 2, petiteFinaleIds[0], petiteFinaleIds[1]),
-    [thirdPlaceScore, petiteFinaleIds[0], petiteFinaleIds[1]],
+    () => winnerPidFromBoNScores(thirdPlaceScore, 2, petiteFinaleMatchIds[0], petiteFinaleMatchIds[1]),
+    [thirdPlaceScore, petiteFinaleMatchIds],
   )
 
   const predictionStateRef = useRef({
@@ -916,47 +959,59 @@ function MrmPrediction() {
             const o2 = reconcileOrder(g2.length, pred.order2)
             setOrder1(o1)
             setOrder2(o2)
-            const s1 = semi1PairIds(o1, o2)
-            const s2 = semi2PairIds(o1, o2)
+            const hydrateMap = new Map()
+            g1.forEach((p, i) => hydrateMap.set(playerId(1, i), p))
+            g2.forEach((p, i) => hydrateMap.set(playerId(2, i), p))
+            const s1Fallback = semi1PairIds(o1, o2)
+            const s2Fallback = semi2PairIds(o1, o2)
+            const s1 = resolvePlayoffMatchIds(
+              buildBracketSemiPair(tournamentBracket, 0, 1, s1Fallback[0], s1Fallback[1], hydrateMap),
+              s1Fallback[0],
+              s1Fallback[1],
+            )
+            const s2 = resolvePlayoffMatchIds(
+              buildBracketSemiPair(tournamentBracket, 2, 3, s2Fallback[0], s2Fallback[1], hydrateMap),
+              s2Fallback[0],
+              s2Fallback[1],
+            )
+            const semi1WinnerSaved = resolveWinnerPid(pred.semi1Winner, s1, hydrateMap)
+            const semi2WinnerSaved = resolveWinnerPid(pred.semi2Winner, s2, hydrateMap)
             const sc1 =
               parseSavedPairScore(pred.semi1Score, 2) ??
-              minimalScoreFromWinnerPid(
-                pred.semi1Winner && s1.includes(pred.semi1Winner) ? pred.semi1Winner : null,
-                s1[0],
-                s1[1],
-                2,
-              )
+              minimalScoreFromWinnerPid(semi1WinnerSaved, s1[0], s1[1], 2)
             const sc2 =
               parseSavedPairScore(pred.semi2Score, 2) ??
-              minimalScoreFromWinnerPid(
-                pred.semi2Winner && s2.includes(pred.semi2Winner) ? pred.semi2Winner : null,
-                s2[0],
-                s2[1],
-                2,
-              )
+              minimalScoreFromWinnerPid(semi2WinnerSaved, s2[0], s2[1], 2)
             setSemi1Score(sc1)
             setSemi2Score(sc2)
             const w1Pred = winnerPidFromBoNScores(sc1, 2, s1[0], s1[1])
             const w2Pred = winnerPidFromBoNScores(sc2, 2, s2[0], s2[1])
             const w1 = finished.semi1
-              ? resolveOfficialWinnerPid(official?.semi1Winner, s1, playerMap, null, 0, 1, 2) ?? w1Pred
+              ? resolveOfficialWinnerPid(official?.semi1Winner, s1, hydrateMap, tournamentBracket?.semi, 0, 1, 2) ??
+                w1Pred
               : w1Pred
             const w2 = finished.semi2
-              ? resolveOfficialWinnerPid(official?.semi2Winner, s2, playerMap, null, 2, 3, 2) ?? w2Pred
+              ? resolveOfficialWinnerPid(official?.semi2Winner, s2, hydrateMap, tournamentBracket?.semi, 2, 3, 2) ??
+                w2Pred
               : w2Pred
-            const thirdPlaceFinalists = [matchLoserId(s1, w1), matchLoserId(s2, w2)].filter(Boolean)
-            const pf0 = thirdPlaceFinalists[0] ?? null
-            const pf1 = thirdPlaceFinalists[1] ?? null
+            const pfFallback = [matchLoserId(s1, w1), matchLoserId(s2, w2)]
+            const pfMatch = resolvePlayoffMatchIds(
+              buildBracketSlotPair(
+                tournamentBracket?.lower,
+                0,
+                1,
+                pfFallback[0],
+                pfFallback[1],
+                hydrateMap,
+              ),
+              pfFallback[0],
+              pfFallback[1],
+            )
             const thirdPlaceWinnerRaw = pred.thirdPlaceWinner ?? pred.petiteFinaleWinner ?? pred.smallFinalWinner ?? null
-            const tpResolved =
-              thirdPlaceWinnerRaw &&
-                thirdPlaceFinalists.length === 2 &&
-                thirdPlaceFinalists.includes(thirdPlaceWinnerRaw)
-                ? thirdPlaceWinnerRaw
-                : null
+            const tpResolved = resolveWinnerPid(thirdPlaceWinnerRaw, pfMatch, hydrateMap)
             const scThird =
               parseSavedPairScore(pred.thirdPlaceScore ?? pred.petiteFinaleScore, 2) ??
-              minimalScoreFromWinnerPid(tpResolved, pf0, pf1, 2)
+              minimalScoreFromWinnerPid(tpResolved, pfMatch[0], pfMatch[1], 2)
             setThirdPlaceScore(scThird)
             const finalists = [w1, w2].filter(Boolean)
             const f0 = finalists[0] ?? null
@@ -998,11 +1053,11 @@ function MrmPrediction() {
     return () => {
       cancelled = true
     }
-  }, [authChecked, groupsLoaded, discordUser, location.pathname, g1.length, g2.length, playerMap])
+  }, [authChecked, groupsLoaded, discordUser, location.pathname, g1.length, g2.length, g1, g2, tournamentBracket])
 
   useEffect(() => {
     if (!hydrated) return
-    const k = `${s1Ids[0] ?? ''}|${s1Ids[1] ?? ''}`
+    const k = `${semi1MatchIds[0] ?? ''}|${semi1MatchIds[1] ?? ''}`
     if (semi1PairKeyRef.current === '') {
       semi1PairKeyRef.current = k
       return
@@ -1011,11 +1066,11 @@ function MrmPrediction() {
       semi1PairKeyRef.current = k
       setSemi1Score([0, 0])
     }
-  }, [hydrated, s1Ids[0], s1Ids[1]])
+  }, [hydrated, semi1MatchIds[0], semi1MatchIds[1]])
 
   useEffect(() => {
     if (!hydrated) return
-    const k = `${s2Ids[0] ?? ''}|${s2Ids[1] ?? ''}`
+    const k = `${semi2MatchIds[0] ?? ''}|${semi2MatchIds[1] ?? ''}`
     if (semi2PairKeyRef.current === '') {
       semi2PairKeyRef.current = k
       return
@@ -1024,11 +1079,11 @@ function MrmPrediction() {
       semi2PairKeyRef.current = k
       setSemi2Score([0, 0])
     }
-  }, [hydrated, s2Ids[0], s2Ids[1]])
+  }, [hydrated, semi2MatchIds[0], semi2MatchIds[1]])
 
   useEffect(() => {
     if (!hydrated) return
-    const k = `${petiteFinaleIds[0] ?? ''}|${petiteFinaleIds[1] ?? ''}`
+    const k = `${petiteFinaleMatchIds[0] ?? ''}|${petiteFinaleMatchIds[1] ?? ''}`
     if (thirdPairKeyRef.current === '') {
       thirdPairKeyRef.current = k
       return
@@ -1037,7 +1092,7 @@ function MrmPrediction() {
       thirdPairKeyRef.current = k
       setThirdPlaceScore([0, 0])
     }
-  }, [hydrated, petiteFinaleIds[0], petiteFinaleIds[1]])
+  }, [hydrated, petiteFinaleMatchIds[0], petiteFinaleMatchIds[1]])
 
   useEffect(() => {
     if (!hydrated) return
@@ -1166,40 +1221,40 @@ function MrmPrediction() {
     () =>
       resolveOfficialWinnerPid(
         officialInfo?.semi1Winner,
-        [semi1BracketPair.pid0, semi1BracketPair.pid1].filter(Boolean),
+        semi1MatchIds.filter(Boolean),
         playerMap,
         tournamentBracket?.semi,
         0,
         1,
         2,
       ),
-    [officialInfo, tournamentBracket, semi1BracketPair, playerMap],
+    [officialInfo, tournamentBracket, semi1MatchIds, playerMap],
   )
   const officialSemi2WinnerPid = useMemo(
     () =>
       resolveOfficialWinnerPid(
         officialInfo?.semi2Winner,
-        [semi2BracketPair.pid0, semi2BracketPair.pid1].filter(Boolean),
+        semi2MatchIds.filter(Boolean),
         playerMap,
         tournamentBracket?.semi,
         2,
         3,
         2,
       ),
-    [officialInfo, tournamentBracket, semi2BracketPair, playerMap],
+    [officialInfo, tournamentBracket, semi2MatchIds, playerMap],
   )
   const officialThirdPlaceWinnerPid = useMemo(
     () =>
       resolveOfficialWinnerPid(
         officialInfo?.thirdPlaceWinner,
-        petiteFinaleIds.filter(Boolean),
+        petiteFinaleMatchIds.filter(Boolean),
         playerMap,
         tournamentBracket?.lower,
         0,
         1,
         2,
       ),
-    [officialInfo, tournamentBracket, petiteFinaleIds, playerMap],
+    [officialInfo, tournamentBracket, petiteFinaleMatchIds, playerMap],
   )
 
   const runnerUpId = useMemo(() => {
@@ -1511,18 +1566,23 @@ function MrmPrediction() {
                     <div className="round-label round-label-third">PETITE FINALE</div>
                     <div className={`match match-third-place ${isThirdPlaceLocked ? 'match--locked' : ''}`}>
                       <BracketScoredPlayerRow
-                        pid={bracketDisplayPid(petiteFinaleIds[0])}
-                        player={bracketDisplayPlayer(petiteFinaleIds[0])}
+                        pid={bracketDisplayPid(petiteFinaleMatchIds[0])}
+                        player={lowerBracketPair.player0 ?? bracketDisplayPlayer(petiteFinaleMatchIds[0])}
                         side={0}
                         scoreValue={thirdPlaceScore[0]}
                         matchScores={thirdPlaceScore}
                         maxScore={2}
                         winnerPid={thirdPlaceWinner}
-                        pickable={canEditThirdPlace && showPlayoffBracketMatchups && petiteFinaleIds[0] != null && petiteFinaleIds[1] != null}
+                        pickable={
+                          canEditThirdPlace &&
+                          showPlayoffBracketMatchups &&
+                          petiteFinaleMatchIds[0] != null &&
+                          petiteFinaleMatchIds[1] != null
+                        }
                         onIncrement={(side) => setThirdPlaceScore((s) => tryIncrementBoN(s, side, 2))}
                         onScoreDigit={(side) => setThirdPlaceScore((s) => applyScoreDigitClick(s, side, 2))}
                         comparisonClass={bracketResultClass(
-                          bracketDisplayPid(petiteFinaleIds[0]),
+                          bracketDisplayPid(petiteFinaleMatchIds[0]),
                           thirdPlaceWinner,
                           officialThirdPlaceWinnerPid,
                           playoffsThirdScored,
@@ -1530,18 +1590,23 @@ function MrmPrediction() {
                         resultsRevealed={playoffsThirdScored}
                       />
                       <BracketScoredPlayerRow
-                        pid={bracketDisplayPid(petiteFinaleIds[1])}
-                        player={bracketDisplayPlayer(petiteFinaleIds[1])}
+                        pid={bracketDisplayPid(petiteFinaleMatchIds[1])}
+                        player={lowerBracketPair.player1 ?? bracketDisplayPlayer(petiteFinaleMatchIds[1])}
                         side={1}
                         scoreValue={thirdPlaceScore[1]}
                         matchScores={thirdPlaceScore}
                         maxScore={2}
                         winnerPid={thirdPlaceWinner}
-                        pickable={canEditThirdPlace && showPlayoffBracketMatchups && petiteFinaleIds[0] != null && petiteFinaleIds[1] != null}
+                        pickable={
+                          canEditThirdPlace &&
+                          showPlayoffBracketMatchups &&
+                          petiteFinaleMatchIds[0] != null &&
+                          petiteFinaleMatchIds[1] != null
+                        }
                         onIncrement={(side) => setThirdPlaceScore((s) => tryIncrementBoN(s, side, 2))}
                         onScoreDigit={(side) => setThirdPlaceScore((s) => applyScoreDigitClick(s, side, 2))}
                         comparisonClass={bracketResultClass(
-                          bracketDisplayPid(petiteFinaleIds[1]),
+                          bracketDisplayPid(petiteFinaleMatchIds[1]),
                           thirdPlaceWinner,
                           officialThirdPlaceWinnerPid,
                           playoffsThirdScored,
