@@ -190,7 +190,7 @@ function LeaderboardRanked() {
                         <tr
                           className={`rank-row${player.placement > 16 ? ' rank-row--unqualified-todo' : ''}`}
                           key={`${player.id || player.username}-${searchTerm}`}
-                          onClick={() => window.open(`https://mcsrranked.com/stats/${player.username}`, '_blank')}
+                          onClick={() => window.open(`https://mcsrranked.com/stats/${player.username}?season=${season}`, '_blank')}
                           style={{ cursor: 'pointer', animationDelay: `${index * 30}ms` }}
                         >
                           <td className="rank">
@@ -218,7 +218,7 @@ function LeaderboardRanked() {
                             </div>
                           </td>
                         </tr>
-                        {/* {player.placement === 16 && (
+                        {season > 9 && player.placement === 16 && (
                           <tr className="qualification-threshold">
                             <td colSpan="3">
                               <div className="threshold-line">
@@ -226,7 +226,7 @@ function LeaderboardRanked() {
                               </div>
                             </td>
                           </tr>
-                        )} */}
+                        )}
                       </>
                     ))}
                   </tbody>
