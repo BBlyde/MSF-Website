@@ -2,6 +2,7 @@
 const DRAFTOUT_WHITELIST = [
   '6f98b3f3-38ea-43a7-b113-93395fbaee3f', // Eallyos
   'e028c32f-b714-4ac6-ba9b-f9ffb0acc2e7', // Fxllenn__
+  '0f6ad204-09c1-469e-9c7f-8831164e0ff2', // vJaap
 ]
 
 export default async function handler(req, res) {
