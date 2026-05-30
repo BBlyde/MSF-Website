@@ -101,7 +101,7 @@ function LeaderboardDraftout() {
                         <td className="player-name">
                           <span className="player-name-inner">
                             <img
-                              src={`https://mc-heads.net/avatar/${player.username}/24`}
+                              src={`https://minotar.net/helm/${player.username}/100.png`}
                               alt={player.username}
                               className="player-head"
                             />

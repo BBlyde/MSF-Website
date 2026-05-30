@@ -1,6 +1,7 @@
 // UUIDs de runners draftout non présents dans le classement ranked MSF
 const DRAFTOUT_WHITELIST = [
-  '6f98b3f3-38ea-43a7-b113-93395fbaee3f',
+  '6f98b3f3-38ea-43a7-b113-93395fbaee3f', // Eallyos
+  'e028c32f-b714-4ac6-ba9b-f9ffb0acc2e7', // Fxllenn__
 ]
 
 export default async function handler(req, res) {
@@ -11,7 +12,7 @@ export default async function handler(req, res) {
 
   try {
     // Récupére la liste des runners MSF
-    const leaderboardRes = await fetch('https://back.mcsr-game.com/leaderboard', {
+    const leaderboardRes = await fetch('https://back.mcsr-game.com/leaderboard?season=10', {
       signal: AbortSignal.timeout(5000),
     })
     if (!leaderboardRes.ok) {
