@@ -1,7 +1,7 @@
 import { next } from '@vercel/functions'
 import { backendTargetUrl } from './api/lib/backendUrl.js'
 
-const NODE_ONLY = new Set(['/api/predictions/mrm', '/api/prediction/mrm'])
+const NODE_ONLY = new Set(['/api/predictions/mrm', '/api/prediction/mrm', '/api/draftout/stats'])
 
 export const config = { matcher: '/api/:path*' }
 

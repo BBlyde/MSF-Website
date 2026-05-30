@@ -54,26 +54,34 @@ function Header() {
   let headerClass = 'header header-home'
   let leaderboardClass = 'leaderboard-home'
   let leaderboardLabel = 'HOME'
-  if (location.pathname === '/rsg') {
-    headerClass = 'header header-rsg'
-    leaderboardClass = 'leaderboard-rsg'
-    leaderboardLabel = 'LEADERBOARD'
-  } else if (location.pathname === '/ranked') {
-    headerClass = 'header header-ranked'
-    leaderboardClass = 'leaderboard-ranked'
-    leaderboardLabel = 'LEADERBOARD'
-  } else if (
-    location.pathname === '/mrm' ||
-    location.pathname === '/prediction/mrm' ||
-    location.pathname.startsWith('/prediction/mrm/')
-  ) {
-    headerClass = 'header header-mrm'
-    leaderboardClass = 'leaderboard-ranked'
-    leaderboardLabel = 'TOURNAMENT'
-  } else if (location.pathname === '/tournament') {
-    headerClass = 'header header-tournament'
-    leaderboardClass = 'leaderboard-tournament'
-    leaderboardLabel = 'TOURNAMENT'
+
+  const path = location.pathname.startsWith('/prediction/mrm') ? '/mrm' : location.pathname
+  switch (path) {
+    case '/rsg':
+      headerClass = 'header header-rsg'
+      leaderboardClass = 'leaderboard-rsg'
+      leaderboardLabel = 'LEADERBOARD'
+      break
+    case '/ranked':
+      headerClass = 'header header-ranked'
+      leaderboardClass = 'leaderboard-ranked'
+      leaderboardLabel = 'LEADERBOARD'
+      break
+    case '/mrm':
+      headerClass = 'header header-mrm'
+      leaderboardClass = 'leaderboard-ranked'
+      leaderboardLabel = 'TOURNAMENT'
+      break
+    case '/tournament':
+      headerClass = 'header header-tournament'
+      leaderboardClass = 'leaderboard-tournament'
+      leaderboardLabel = 'TOURNAMENT'
+      break
+    case '/draftout':
+      headerClass = 'header header-draftout'
+      leaderboardClass = 'leaderboard-draftout'
+      leaderboardLabel = 'LEADERBOARD'
+      break
   }
 
   return (
@@ -91,6 +99,7 @@ function Header() {
               <ul className='nav-dropdown'>
                 <li className='nav-rsg'><Link to="/rsg">ANY%</Link></li>
                 <li className='nav-ranked'><Link to="/ranked">RANKED</Link></li>
+                <li className='nav-draftout'><Link to="/draftout">DRAFTOUT</Link></li>
               </ul>
             </li>
             <li className='nav-tournois'>

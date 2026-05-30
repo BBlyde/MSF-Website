@@ -5,6 +5,7 @@ import authLogout from './api/auth/logout.js'
 import { proxyBrowserApiToBackendAdapter } from './api/lib/backendApiProxy.js'
 import { denyUnlessAdmin, tournamentWriteRequiresAdmin } from './api/lib/adminAuth.js'
 import predictionsMrm from './api/predictions/mrm.js'
+import draftoutStats from './api/draftout/stats.js'
 
 function vercelResponseAdapter(nodeRes) {
   let statusCode = 200
@@ -83,6 +84,10 @@ export function devApiPlugin() {
             }
             if (pathname === '/api/predictions/mrm' || pathname === '/api/prediction/mrm') {
               await predictionsMrm(req, vres)
+              return
+            }
+            if (pathname === '/api/draftout/stats' && req.method === 'GET') {
+              await draftoutStats(req, vres)
               return
             }
             const pathWithQuery = pathname + (url.search || '')
