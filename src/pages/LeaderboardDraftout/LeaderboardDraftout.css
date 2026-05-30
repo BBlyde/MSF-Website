@@ -1,0 +1,52 @@
+.leaderboard-draftout .draftout-title {
+    background: linear-gradient(90deg,
+            #1b7d8a 0%,
+            #1b7d8a 35%,
+            #0d1b2a 50%,
+            #1b7d8a 65%,
+            #1b7d8a 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: textWave 14s linear infinite;
+}
+
+.leaderboard-draftout .loading {
+    color: #1b7d8a;
+}
+
+.leaderboard-draftout .info a {
+    color: inherit;
+}
+
+.leaderboard-draftout .leaderboard-table thead {
+    background: linear-gradient(90deg, #1b7d8a 0%, #0d1b2a 75%);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.leaderboard-draftout .leaderboard-table .rank-number:not(.rank-1):not(.rank-2):not(.rank-3) {
+    color: #1b7d8a;
+}
+
+.leaderboard-draftout .leaderboard-table thead th.score {
+    text-align: right;
+    padding-right: 1.5rem;
+}
+
+.leaderboard-draftout .leaderboard-table tbody td.score .score-inner {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: auto;
+    width: fit-content;
+}
+
+.leaderboard-draftout .leaderboard-table tbody td.score .elo-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: default;
+}

@@ -222,21 +222,16 @@
 }
 
 .leaderboard-ranked .leaderboard-table tbody td.score .score-inner {
-    display: grid;
-    grid-template-columns: 22px 48px;
-    align-items: center;
+    display: flex;
     justify-content: flex-end;
     margin-left: auto;
     width: fit-content;
-    gap: 6px;
 }
 
 .leaderboard-ranked .leaderboard-table tbody td.score .rank-badge-tooltip {
-    width: 22px;
-    height: 22px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
     position: relative;
 }
 

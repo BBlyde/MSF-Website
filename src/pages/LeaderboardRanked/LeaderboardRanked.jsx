@@ -211,10 +211,10 @@ function LeaderboardRanked() {
                           <td className="score">
                             <div className="score-inner">
                               <span className="rank-badge-tooltip">
+                                <span className="elo-value">{player.elo}</span>
                                 <img src={getRankImg(player.elo).src} alt={getRankImg(player.elo).label} className="rank-badge-img" />
                                 <span className="rank-tooltip-text">{getRankImg(player.elo).label}</span>
                               </span>
-                              <span className="elo-value">{player.elo}</span>
                             </div>
                           </td>
                         </tr>

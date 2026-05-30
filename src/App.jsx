@@ -7,6 +7,7 @@ import Footer from './components/Footer'
 import Home from './pages/Home'
 import LeaderboardRsg from './pages/LeaderboardRsg'
 import LeaderboardRanked from './pages/LeaderboardRanked'
+import LeaderboardDraftout from './pages/LeaderboardDraftout'
 import Mrm from './pages/Mrm'
 import MrmPrediction from './pages/MrmPrediction'
 import Tournament from './pages/Tournament'
@@ -38,6 +39,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/rsg" element={<LeaderboardRsg />} />
           <Route path="/ranked" element={<LeaderboardRanked />} />
+          <Route path="/draftout" element={<LeaderboardDraftout />} />
           <Route path="/mrm" element={<Mrm />} />
           <Route path="/prediction/mrm/:discordId" element={<MrmPrediction />} />
           <Route path="/prediction/mrm" element={<MrmPrediction />} />
