@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import './LeaderboardDraftout.css'
 
@@ -18,6 +18,21 @@ function LeaderboardDraftout() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [hoveredPlayer, setHoveredPlayer] = useState(null)
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+
+  const handleRowMouseEnter = useCallback((player, e) => {
+    setHoveredPlayer(player)
+    setTooltipPos({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleRowMouseMove = useCallback((e) => {
+    setTooltipPos({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleRowMouseLeave = useCallback(() => {
+    setHoveredPlayer(null)
+  }, [])
 
   useEffect(() => {
     fetchLeaderboard()
@@ -94,6 +109,9 @@ function LeaderboardDraftout() {
                         className="rank-row"
                         style={{ animationDelay: `${index * 30}ms`, cursor: 'pointer' }}
                         onClick={() => window.open(`https://draftoutmc.com/leaderboard/${player.username}?metric=elo&filter=competitive`, '_blank')}
+                        onMouseEnter={(e) => handleRowMouseEnter(player, e)}
+                        onMouseMove={handleRowMouseMove}
+                        onMouseLeave={handleRowMouseLeave}
                       >
                         <td className="rank">
                           <span className={`rank-number rank-${player.rank}`}>{player.rank}</span>
@@ -125,6 +143,49 @@ function LeaderboardDraftout() {
           </>
         )}
       </div>
+
+      {hoveredPlayer && (
+        <div
+          className="row-stats-tooltip"
+          style={{ left: tooltipPos.x + 18, top: tooltipPos.y + 18 }}
+        >
+          <div className="rst-header">
+            <span className="rst-rank">#{hoveredPlayer.draftoutRank ?? '-'}</span>
+            {hoveredPlayer.username}
+          </div>
+          <div className="rst-grid">
+            <span className="rst-label">W-D-L</span>
+            <span className="rst-value">
+              <span className="rst-win">{hoveredPlayer.wins}</span>
+              {' - '}
+              <span className="rst-draw">{hoveredPlayer.draws}</span>
+              {' - '}
+              <span className="rst-loss">{hoveredPlayer.losses}</span>
+              <span className="rst-matches"> / {hoveredPlayer.matches}</span>
+            </span>
+
+            <span className="rst-label">Winrate</span>
+            <span className="rst-value rst-win">{(hoveredPlayer.winRate * 100).toFixed(1)}%</span>
+
+            <span className="rst-label">Goal diff</span>
+            <span className="rst-value">{hoveredPlayer.averageGoals != null ? hoveredPlayer.averageGoals.toFixed(2) : '-'}</span>
+
+            <span className="rst-label">Avg. finish</span>
+            <span className="rst-value">{formatTime(hoveredPlayer.averageFinishTime)}</span>
+
+            <span className="rst-label">Peak Elo</span>
+            <span className="rst-value" style={{ color: hoveredPlayer.rankColor }}>{hoveredPlayer.peakElo ?? '-'}</span>
+
+            <span className="rst-label">Forfeits</span>
+            <span className="rst-value">
+              {hoveredPlayer.forfeitCount}
+              {hoveredPlayer.matches > 0 && (
+                <span className="rst-matches"> ({((hoveredPlayer.forfeitCount / hoveredPlayer.matches) * 100).toFixed(1)}%)</span>
+              )}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

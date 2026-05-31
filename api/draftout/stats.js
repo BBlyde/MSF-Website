@@ -61,19 +61,27 @@ export default async function handler(req, res) {
     const players = []
     for (const result of results) {
       if (result.status !== 'fulfilled' || !result.value) continue
-      const { player, record } = result.value
+      const { player, record, aggregate } = result.value
       if (!player) continue
       if ((record?.matches ?? 0) === 0) continue
+
       players.push({
         uuid: player.uuid,
         username: player.username,
         elo: player.elo,
+        draftoutRank: player.rank ?? null,
         rankName: player.rankName ?? 'Unranked',
         rankColor: player.rankColor,
         wins: record?.wins ?? 0,
+        draws: record?.draws ?? 0,
         losses: record?.losses ?? 0,
+        matches: record?.matches ?? 0,
         winRate: record?.winRate ?? 0,
         averageFinishTime: record?.averageFinishTime ?? null,
+        averageGoals: record?.averageGoals ?? null,
+        forfeitCount: aggregate?.forfeitCount ?? 0,
+        bestStreak: aggregate?.bestStreak ?? 0,
+        peakElo: aggregate?.peakElo ?? null,
       })
     }
 

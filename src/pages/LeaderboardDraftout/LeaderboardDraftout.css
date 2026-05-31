@@ -50,3 +50,69 @@
     font-weight: 800;
     cursor: default;
 }
+
+.row-stats-tooltip {
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
+    background: #0d1b2a;
+    border: 1px solid #1b7d8a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 220px;
+    max-width: 280px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+    font-size: 0.82rem;
+    color: #d0e8ed;
+    line-height: 1.4;
+}
+
+.row-stats-tooltip .rst-header {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #d0e8ed;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(27, 125, 138, 0.35);
+    padding-bottom: 5px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.row-stats-tooltip .rst-rank {
+    color: #1b7d8a;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.row-stats-tooltip .rst-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3px 10px;
+    align-items: center;
+}
+
+.row-stats-tooltip .rst-label {
+    color: #7aa6b0;
+    white-space: nowrap;
+    font-size: 0.78rem;
+}
+
+.row-stats-tooltip .rst-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: #d0e8ed;
+}
+
+.row-stats-tooltip .rst-win   { color: #4caf87; }
+.row-stats-tooltip .rst-draw  { color: #64c8e8; }
+.row-stats-tooltip .rst-loss  { color: #d95f5f; }
+
+.row-stats-tooltip .rst-matches {
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 400;
+    font-family: inherit;
+}
