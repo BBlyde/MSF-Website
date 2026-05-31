@@ -3,6 +3,18 @@ const DRAFTOUT_WHITELIST = [
   '6f98b3f3-38ea-43a7-b113-93395fbaee3f', // Eallyos
   'e028c32f-b714-4ac6-ba9b-f9ffb0acc2e7', // Fxllenn__
   '0f6ad204-09c1-469e-9c7f-8831164e0ff2', // vJaap
+  '374f200d-6689-498f-8199-225a7632afc1', // Diamouxx
+  '713b3afb-4167-4010-937b-a0e985312507', // _Luzord 
+  '0654a538-d4e2-4664-9bdf-50c4f5134061', // Omeega_ 
+  '220e895c-036c-4486-9e43-3b47f7cc072e', // MartinPonk
+  'cd17d2ea-6c7d-406a-b928-66281eed4013', // SKMimilox
+  'd4af7bd3-1406-447d-9d34-5cebed6d2dea', // SKMatteo
+  '25cb2956-f786-4b78-aa9d-c7c738745e3b', // MaloxMC
+  '6af3ba29-9e68-4505-afe3-6024dc97c5c5', // mohamany13 
+  '26efa306-796d-4de5-b3c6-aca83f22d7ab', // Nol760
+  '67cd2e22-29c4-488e-86d3-23b9de7aba4c', // yeltx
+  'e1f3ec98-a4ec-45f3-9552-8fcf27cad4db', // Tircis
+  'f17d73af-a0f5-4e88-8205-250543919a01', // KennyShield_
 ]
 
 export default async function handler(req, res) {
