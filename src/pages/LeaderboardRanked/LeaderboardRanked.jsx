@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './LeaderboardRanked.css'
@@ -29,11 +29,49 @@ function LeaderboardRanked() {
   const [searchTerm, setSearchTerm] = useState('')
   const [timeLeft, setTimeLeft] = useState('')
   const [seasonEndDate, setSeasonEndDate] = useState(null)
+  const [hoveredPlayer, setHoveredPlayer] = useState(null)
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const playerCache = useRef({})
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const season = parseInt(searchParams.get('season') || DEFAULT_SEASON, 10)
 
   const API_URL = 'https://back.mcsr-game.com/leaderboard'
+
+  const formatTime = (ms) => {
+    if (!ms) return '-'
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  const handleRowMouseEnter = useCallback(async (player, e) => {
+    const cacheKey = `${player.uuid}_s${season}`
+    const cached = playerCache.current[cacheKey]
+    setHoveredPlayer({ ...player, stats: cached ?? null })
+    setTooltipPos({ x: e.clientX, y: e.clientY })
+    if (!cached) {
+      try {
+        const res = await axios.get(`https://mcsrranked.com/api/users/${player.username}?season=${season}`)
+        const stats = { ...res.data.data.statistics.season, eloRank: res.data.data.eloRank }
+        playerCache.current[cacheKey] = stats
+        setHoveredPlayer(prev =>
+          prev?.uuid === player.uuid ? { ...prev, stats } : prev
+        )
+      } catch {
+        playerCache.current[cacheKey] = 'error'
+      }
+    }
+  }, [season])
+
+  const handleRowMouseMove = useCallback((e) => {
+    setTooltipPos({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleRowMouseLeave = useCallback(() => {
+    setHoveredPlayer(null)
+  }, [])
 
   const getRankImg = (elo) => {
     if (elo >= 2000) return { src: netheriteImg, label: 'Netherite' }
@@ -192,6 +230,9 @@ function LeaderboardRanked() {
                           key={`${player.id || player.username}-${searchTerm}`}
                           onClick={() => window.open(`https://mcsrranked.com/stats/${player.username}?season=${season}`, '_blank')}
                           style={{ cursor: 'pointer', animationDelay: `${index * 30}ms` }}
+                          onMouseEnter={(e) => handleRowMouseEnter(player, e)}
+                          onMouseMove={handleRowMouseMove}
+                          onMouseLeave={handleRowMouseLeave}
                         >
                           <td className="rank">
                             <span className={`rank-number rank-${player.placement}`}>{player.placement}</span>
@@ -236,6 +277,67 @@ function LeaderboardRanked() {
           </>
         )}
       </div>
+
+      {hoveredPlayer && (
+        <div
+          className="row-stats-tooltip rst-ranked"
+          style={{ left: tooltipPos.x + 18, top: tooltipPos.y + 18 }}
+        >
+          <div className="rst-header">
+            <img
+              src={`https://minotar.net/helm/${hoveredPlayer.username}/32.png`}
+              alt={hoveredPlayer.username}
+              className="rst-head"
+            />
+            <span className="rst-rank">#{hoveredPlayer.stats?.eloRank ?? hoveredPlayer.placement}</span>
+            {hoveredPlayer.username}
+          </div>
+          {!hoveredPlayer.stats ? (
+            <div className="rst-loading">Chargement...</div>
+          ) : hoveredPlayer.stats === 'error' ? (
+            <div className="rst-loading">Données indisponibles</div>
+          ) : (
+            <div className="rst-grid">
+              <span className="rst-label">W-D-L</span>
+              <span className="rst-value">
+                <span className="rst-win">{hoveredPlayer.stats.wins.ranked}</span>
+                {' - '}
+                <span className="rst-draw">{hoveredPlayer.stats.playedMatches.ranked - hoveredPlayer.stats.wins.ranked - hoveredPlayer.stats.loses.ranked}</span>
+                {' - '}
+                <span className="rst-loss">{hoveredPlayer.stats.loses.ranked}</span>
+                <span className="rst-matches"> / {hoveredPlayer.stats.playedMatches.ranked}</span>
+              </span>
+
+              <span className="rst-label">Winrate</span>
+              <span className="rst-value rst-win">
+                {hoveredPlayer.stats.playedMatches.ranked > 0
+                  ? ((hoveredPlayer.stats.wins.ranked / hoveredPlayer.stats.playedMatches.ranked) * 100).toFixed(1)
+                  : '0.0'}%
+              </span>
+
+              <span className="rst-label">Average</span>
+              <span className="rst-value">{formatTime(hoveredPlayer.stats.completionTime.ranked / hoveredPlayer.stats.completions.ranked)}</span>
+
+              <span className="rst-label">PB</span>
+              <span className="rst-value">{formatTime(hoveredPlayer.stats.bestTime.ranked)}</span>
+
+              <span className="rst-label">Win streak</span>
+              <span className="rst-value">
+                {hoveredPlayer.stats.currentWinStreak.ranked}
+                <span className="rst-matches"> ({hoveredPlayer.stats.highestWinStreak.ranked} best)</span>
+              </span>
+
+              <span className="rst-label">Forfeits</span>
+              <span className="rst-value">
+                {hoveredPlayer.stats.forfeits.ranked}
+                {hoveredPlayer.stats.playedMatches.ranked > 0 && (
+                  <span className="rst-matches"> ({((hoveredPlayer.stats.forfeits.ranked / hoveredPlayer.stats.playedMatches.ranked) * 100).toFixed(1)}%)</span>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

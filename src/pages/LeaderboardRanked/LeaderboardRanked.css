@@ -327,6 +327,14 @@
         padding: 1rem;
     }
 
+    .rank-tooltip-text {
+        display: none;
+    }
+
+    .row-stats-tooltip.rst-ranked {
+        display: none;
+    }
+
     .leaderboard-header h1 {
         font-size: 1.8rem;
     }
@@ -411,4 +419,83 @@
 .rank-badge-tooltip:hover .rank-tooltip-text {
     visibility: visible;
     opacity: 1;
+}
+
+.row-stats-tooltip.rst-ranked {
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
+    background: #102C30;
+    border: 1px solid #86CE34;
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 210px;
+    max-width: 270px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+    font-size: 0.82rem;
+    color: #ffffff;
+    line-height: 1.4;
+}
+
+.row-stats-tooltip.rst-ranked .rst-header {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #ffffff;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(134, 206, 52, 0.35);
+    padding-bottom: 5px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.row-stats-tooltip.rst-ranked .rst-rank {
+    color: #86CE34;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.row-stats-tooltip.rst-ranked .rst-head {
+    width: 28px;
+    height: 28px;
+    image-rendering: pixelated;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.row-stats-tooltip.rst-ranked .rst-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3px 10px;
+    align-items: center;
+}
+
+.row-stats-tooltip.rst-ranked .rst-label {
+    color: #8aaa6a;
+    white-space: nowrap;
+    font-size: 0.78rem;
+}
+
+.row-stats-tooltip.rst-ranked .rst-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.row-stats-tooltip.rst-ranked .rst-win   { color: #4caf87; }
+.row-stats-tooltip.rst-ranked .rst-loss  { color: #d95f5f; }
+
+.row-stats-tooltip.rst-ranked .rst-matches {
+    color: #ffffff; 
+    font-size: 0.75rem;
+    font-weight: 400;
+    font-family: inherit;
+}
+
+.row-stats-tooltip.rst-ranked .rst-loading {
+    color: #86CE3480;
+    font-style: italic;
+    font-size: 0.8rem;
 }

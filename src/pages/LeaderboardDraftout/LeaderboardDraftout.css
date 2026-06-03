@@ -63,14 +63,14 @@
     max-width: 280px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
     font-size: 0.82rem;
-    color: #d0e8ed;
+    color: #ffffff;
     line-height: 1.4;
 }
 
 .row-stats-tooltip .rst-header {
     font-weight: 700;
     font-size: 0.9rem;
-    color: #d0e8ed;
+    color: #ffffff;
     margin-bottom: 8px;
     border-bottom: 1px solid rgba(27, 125, 138, 0.35);
     padding-bottom: 5px;
@@ -103,7 +103,7 @@
 .row-stats-tooltip .rst-value {
     font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
-    color: #d0e8ed;
+    color: #ffffff;
 }
 
 .row-stats-tooltip .rst-win   { color: #4caf87; }
@@ -115,4 +115,14 @@
     font-size: 0.75rem;
     font-weight: 400;
     font-family: inherit;
+}
+
+@media (max-width: 768px) {
+    .row-stats-tooltip {
+        display: none;
+    }
+
+    .rank-tooltip-text {
+        display: none;
+    }
 }

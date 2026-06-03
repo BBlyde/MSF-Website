@@ -165,16 +165,16 @@ function LeaderboardDraftout() {
             </span>
 
             <span className="rst-label">Winrate</span>
-            <span className="rst-value rst-win">{(hoveredPlayer.winRate * 100).toFixed(1)}%</span>
+            <span className="rst-value rst-win">{(hoveredPlayer.winRate * 100).toFixed(1)}%</span>            
+
+            <span className="rst-label">Average</span>
+            <span className="rst-value">{formatTime(hoveredPlayer.averageFinishTime)}</span>
 
             <span className="rst-label">Goal diff</span>
             <span className="rst-value">{hoveredPlayer.averageGoals != null ? hoveredPlayer.averageGoals.toFixed(2) : '-'}</span>
 
-            <span className="rst-label">Avg. finish</span>
-            <span className="rst-value">{formatTime(hoveredPlayer.averageFinishTime)}</span>
-
             <span className="rst-label">Peak Elo</span>
-            <span className="rst-value" style={{ color: hoveredPlayer.rankColor }}>{hoveredPlayer.peakElo ?? '-'}</span>
+            <span className="rst-value">{hoveredPlayer.peakElo ?? '-'}</span>
 
             <span className="rst-label">Forfeits</span>
             <span className="rst-value">
