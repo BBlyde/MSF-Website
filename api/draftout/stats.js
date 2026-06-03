@@ -15,6 +15,7 @@ const DRAFTOUT_WHITELIST = [
   '67cd2e22-29c4-488e-86d3-23b9de7aba4c', // yeltx
   'e1f3ec98-a4ec-45f3-9552-8fcf27cad4db', // Tircis
   'f17d73af-a0f5-4e88-8205-250543919a01', // KennyShield_
+  'afc3be63-ba39-491b-9c3c-32a832ecc905', // vavou45
 ]
 
 export default async function handler(req, res) {
