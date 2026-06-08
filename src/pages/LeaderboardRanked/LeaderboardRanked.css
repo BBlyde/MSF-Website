@@ -447,7 +447,15 @@
     letter-spacing: 0.5px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.row-stats-tooltip.rst-ranked .rst-identity {
+    display: flex;
+    align-items: center;
     gap: 6px;
+    min-width: 0;
 }
 
 .row-stats-tooltip.rst-ranked .rst-rank {

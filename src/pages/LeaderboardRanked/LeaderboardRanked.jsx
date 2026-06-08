@@ -284,13 +284,15 @@ function LeaderboardRanked() {
           style={{ left: tooltipPos.x + 18, top: tooltipPos.y + 18 }}
         >
           <div className="rst-header">
+            <div className="rst-identity">
+              <span className="rst-rank">#{hoveredPlayer.stats?.eloRank ?? hoveredPlayer.placement}</span>
+              {hoveredPlayer.username}
+            </div>
             <img
               src={`https://minotar.net/helm/${hoveredPlayer.username}/32.png`}
               alt={hoveredPlayer.username}
               className="rst-head"
             />
-            <span className="rst-rank">#{hoveredPlayer.stats?.eloRank ?? hoveredPlayer.placement}</span>
-            {hoveredPlayer.username}
           </div>
           {!hoveredPlayer.stats ? (
             <div className="rst-loading">Chargement...</div>

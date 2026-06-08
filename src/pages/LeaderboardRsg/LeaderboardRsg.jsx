@@ -3,16 +3,50 @@ import axios from 'axios'
 import './LeaderboardRsg.css'
 
 const SHEET_ID = '1Fgn-assiNCTxiGCUALdRX5i3wRrQHbwE7iSisWynj78'
+const MAIN_SHEET_NAME = 'Leaderboard (sub 15)'
+const STATS_SHEET_NAME = 'Stats'
+
+function parseCSVLine(line) {
+  const result = []
+  let current = ''
+  let inQuotes = false
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    const next = line[i + 1]
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+      continue
+    }
+
+    if (char === ',' && !inQuotes) {
+      result.push(current)
+      current = ''
+      continue
+    }
+
+    current += char
+  }
+
+  result.push(current)
+  return result.map((value) => value.trim())
+}
 
 function parseCSV(csv) {
-  const lines = csv.trim().split('\n')
+  const lines = csv.trim().split(/\r?\n/)
   if (lines.length < 2) return []
 
-  const headers = lines[0].split(',').map((h) => h.trim())
+  const headers = parseCSVLine(lines[0])
   const data = []
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map((v) => v.trim())
+    const values = parseCSVLine(lines[i])
     if (values.length === headers.length) {
       const obj = {}
       headers.forEach((header, index) => {
@@ -30,16 +64,57 @@ function LeaderboardRsg() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [hoveredPlayer, setHoveredPlayer] = useState(null)
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+
+  const normalize = (value) => (value || '').toString().trim().toLowerCase()
+
+  const handleRowMouseEnter = useCallback((player, e) => {
+    setHoveredPlayer(player)
+    setTooltipPos({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleRowMouseMove = useCallback((e) => {
+    setTooltipPos({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleRowMouseLeave = useCallback(() => {
+    setHoveredPlayer(null)
+  }, [])
 
   const fetchLeaderboard = useCallback(async () => {
     try {
       setLoading(true)
-      const sheetUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`
+      const mainSheetUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MAIN_SHEET_NAME)}`
+      const statsSheetUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(STATS_SHEET_NAME)}`
 
-      const response = await axios.get(sheetUrl)
-      const data = parseCSV(response.data)
+      const [mainResponse, statsResponse] = await Promise.all([
+        axios.get(mainSheetUrl),
+        axios.get(statsSheetUrl),
+      ])
 
-      setPlayers(data)
+      const mainData = parseCSV(mainResponse.data)
+      const statsData = parseCSV(statsResponse.data)
+
+      const statsByRunner = []
+      for (const row of statsData) {
+        const byRunner = normalize(row.runner)
+        if (byRunner) statsByRunner.push(row)
+      }
+
+      const mergedData = mainData.map((player) => {
+        const stats = statsByRunner.find((row) => normalize(row.runner) === normalize(player.runner)) || {}
+        return {
+          ...player,
+          tooltipTypeOw: stats["type d'ow"] || '-',
+          tooltipBastion: stats.bastion || '-',
+          tooltipRates: stats.rates || '-',
+          tooltipTravelMethod: stats['travel method'] || '-',
+          tooltipTypeEndfight: stats["type d'endfight"] || '-',
+        }
+      })
+
+      setPlayers(mergedData)
       setLoading(false)
     } catch (err) {
       console.error('Erreur de récupération du classement :', err)
@@ -58,13 +133,14 @@ function LeaderboardRsg() {
   const filteredPlayers = useMemo(
     () =>
       players.filter((player) =>
-        player.runner.toLowerCase().includes(searchTerm.toLowerCase()),
+        (player.runner || '').toLowerCase().includes(searchTerm.toLowerCase()),
       ),
     [searchTerm, players],
   )
 
   return (
-    <div className="leaderboard-container">
+    <div className="leaderboard-rsg">
+      <div className="leaderboard-container">
       <div className="leaderboard-header">
         <h1>CLASSEMENT ANY%</h1>
         <span className="info">Catégorie RSG 1.16.1</span>
@@ -114,6 +190,9 @@ function LeaderboardRsg() {
                       key={`${player.id || player.runner}-${searchTerm}`}
                       onClick={() => window.open(`${player.lien}`, '_blank')}
                       style={{ cursor: 'pointer', animationDelay: `${index * 30}ms` }}
+                      onMouseEnter={(e) => handleRowMouseEnter(player, e)}
+                      onMouseMove={handleRowMouseMove}
+                      onMouseLeave={handleRowMouseLeave}
                     >
                       <td className="rank">
                         <span className={`rank-number rank-${player.classement}`}>{player.classement}</span>
@@ -145,10 +224,42 @@ function LeaderboardRsg() {
               <path fill="#0F9D58" d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
               <path fill="#fff" d="M7 7h4v2H7zm0 4h4v2H7zm0 4h4v2H7zm6-8h4v2h-4zm0 4h4v2h-4zm0 4h4v2h-4z" />
             </svg>
-            Basé sur la Google Sheet des sub 15 MSF, merci à Avocat & Lunet
+            Basé sur la Google Sheet des sub 15 MSF d'Avocat & Lunet
           </a>
         </>
       )}
+
+      {hoveredPlayer && (
+        <div
+          className="row-stats-tooltip rst-rsg"
+          style={{ left: tooltipPos.x + 18, top: tooltipPos.y + 18 }}
+        >
+          <div className="rst-header">
+            <div>
+              <span className="rst-rank">#{hoveredPlayer.classement || '-'}</span>
+              {hoveredPlayer.runner}
+            </div>
+            <div>{hoveredPlayer['f3/nof3'] || '-'}</div>
+          </div>
+          <div className="rst-grid">
+            <span className="rst-label">Overworld</span>
+            <span className="rst-value">{hoveredPlayer.tooltipTypeOw || '-'}</span>
+
+            <span className="rst-label">Bastion</span>
+            <span className="rst-value">{hoveredPlayer.tooltipBastion || '-'}</span>
+
+            <span className="rst-label">Blaze rates</span>
+            <span className="rst-value">{hoveredPlayer.tooltipRates || '-'}</span>
+
+            <span className="rst-label">Travel Method</span>
+            <span className="rst-value">{hoveredPlayer.tooltipTravelMethod || '-'}</span>
+
+            <span className="rst-label">Endfight</span>
+            <span className="rst-value">{hoveredPlayer.tooltipTypeEndfight || '-'}</span>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   )
 }

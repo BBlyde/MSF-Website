@@ -1,25 +1,23 @@
-.info {
+.leaderboard-rsg .info {
   font-style: italic;
 }
 
-.sheet-source {
+.leaderboard-rsg .sheet-source {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
   margin: 1.5rem auto 0;
-  max-width: 1000px;
-  font-size: 0.8rem;
   color: #ffffff40;
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
-.sheet-source:hover {
+.leaderboard-rsg .sheet-source:hover {
   color: #0F9D58;
 }
 
-.sheet-icon {
+.leaderboard-rsg .sheet-icon {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
@@ -27,21 +25,21 @@
   transition: opacity 0.2s ease;
 }
 
-.sheet-source:hover .sheet-icon {
+.leaderboard-rsg .sheet-source:hover .sheet-icon {
   opacity: 1;
 }
 
-.leaderboard-container {
+.leaderboard-rsg .leaderboard-container {
   color: #e6edf3;
   min-height: 100vh;
   padding: 2rem;
 }
 
-.leaderboard-header {
+.leaderboard-rsg .leaderboard-header {
   text-align: center;
 }
 
-.leaderboard-header h1 {
+.leaderboard-rsg .leaderboard-header h1 {
   font-size: 2.5rem;
   font-weight: 700;
   margin: 0;
@@ -60,18 +58,18 @@
   text-shadow: none;
 }
 
-.search-input:focus {
+.leaderboard-rsg .search-input:focus {
   outline: none;
   border-color: #a10d0d;
   box-shadow: 0 0 10px rgba(161, 13, 13, 0.3);
 }
 
-.leaderboard-list {
+.leaderboard-rsg .leaderboard-list {
   max-width: 1000px;
   margin: 0 auto;
 }
 
-.leaderboard-table {
+.leaderboard-rsg .leaderboard-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
@@ -81,46 +79,46 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.leaderboard-table thead {
+.leaderboard-rsg .leaderboard-table thead {
   background: linear-gradient(90deg, rgba(161, 13, 13, 1) 0%, rgb(27, 0, 0) 75%);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.leaderboard-table thead th {
+.leaderboard-rsg .leaderboard-table thead th {
   padding: 1.2rem;
   text-align: left;
   color: #ffffff;
   font-size: 0.9rem;
 }
 
-.leaderboard-table thead th.rank {
+.leaderboard-rsg .leaderboard-table thead th.rank {
   width: 80px;
   text-align: center;
 }
 
-.leaderboard-table thead th.wins {
+.leaderboard-rsg .leaderboard-table thead th.wins {
   width: 150px;
   text-align: right;
   padding-right: 1.5rem;
 }
 
-.rank-row {
+.leaderboard-rsg .rank-row {
   border-bottom: 1px solid #30363d;
   transition: background-color 0.2s ease;
   animation: fadeInRow 0.25s ease both;
 }
 
-.leaderboard-table tbody tr:last-child {
+.leaderboard-rsg .leaderboard-table tbody tr:last-child {
   border-bottom: none;
 }
 
-.rank-row:hover {
+.leaderboard-rsg .rank-row:hover {
   background-color: #21262d;
 }
 
-.leaderboard-table tbody td {
+.leaderboard-rsg .leaderboard-table tbody td {
   padding: 1rem 1.2rem;
   color: #e6edf3;
   font-size: 1rem;
@@ -128,12 +126,12 @@
   vertical-align: middle;
 }
 
-.leaderboard-table tbody td.rank {
+.leaderboard-rsg .leaderboard-table tbody td.rank {
   text-align: center;
   font-weight: 600;
 }
 
-.leaderboard-table tbody td.time {
+.leaderboard-rsg .leaderboard-table tbody td.time {
   padding: 1rem 1.5rem 1rem 0;
   text-align: right;
   font-weight: bold;
@@ -142,7 +140,7 @@
   white-space: nowrap;
 }
 
-.leaderboard-table .rank-number {
+.leaderboard-rsg .leaderboard-table .rank-number {
   display: inline;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
@@ -150,19 +148,19 @@
   color: #a10d0d;
 }
 
-.leaderboard-table .rank-1 {
+.leaderboard-rsg .leaderboard-table .rank-1 {
   color: #ffa600;
 }
 
-.leaderboard-table .rank-2 {
+.leaderboard-rsg .leaderboard-table .rank-2 {
   color: #adadad;
 }
 
-.leaderboard-table .rank-3 {
+.leaderboard-rsg .leaderboard-table .rank-3 {
   color: #E77C56;
 }
 
-.leaderboard-table tbody td.player-name {
+.leaderboard-rsg .leaderboard-table tbody td.player-name {
   font-weight: 500;
   font-size: 1.05rem;
   color: #ffffff;
@@ -171,7 +169,7 @@
   white-space: nowrap;
 }
 
-.leaderboard-table tbody td.time {
+.leaderboard-rsg .leaderboard-table tbody td.time {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
   font-size: 1rem;
@@ -181,7 +179,7 @@
   white-space: nowrap;
 }
 
-.loading {
+.leaderboard-rsg .loading {
   text-align: center;
   padding: 3rem;
   font-size: 1.2rem;
@@ -189,7 +187,7 @@
   animation: pulse 1.5s ease-in-out infinite;
 }
 
-.error {
+.leaderboard-rsg .error {
   background-color: #a10d0d;
   color: #ffffff;
   padding: 1.5rem;
@@ -200,41 +198,104 @@
   margin: 2rem auto;
 }
 
+.row-stats-tooltip.rst-rsg {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  background: #1B0000;
+  border: 1px solid #a10d0d;
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 220px;
+  max-width: 320px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  font-size: 0.82rem;
+  color: #ffffff;
+  line-height: 1.4;
+}
+
+.row-stats-tooltip.rst-rsg .rst-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #ffffff;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(161, 13, 13, 0.35);
+  padding-bottom: 5px;
+  letter-spacing: 0.5px;
+}
+
+.row-stats-tooltip.rst-rsg .rst-rank {
+  color: #a10d0d;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.row-stats-tooltip.rst-rsg .rst-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  align-items: center;
+}
+
+.row-stats-tooltip.rst-rsg .rst-label {
+  color: #d36767;
+  white-space: nowrap;
+  font-size: 0.78rem;
+}
+
+.row-stats-tooltip.rst-rsg .rst-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
-  .leaderboard-container {
+  .leaderboard-rsg .leaderboard-container {
     padding: 1rem;
   }
 
-  .leaderboard-header h1 {
+  .leaderboard-rsg .leaderboard-header h1 {
     font-size: 1.8rem;
   }
 
-  .leaderboard-table thead th {
+  .leaderboard-rsg .leaderboard-table thead th {
     padding: 0.8rem;
     font-size: 0.8rem;
   }
 
-  .leaderboard-table tbody td {
+  .leaderboard-rsg .leaderboard-table tbody td {
     padding: 0.8rem;
   }
 
-  .rank-number {
+  .leaderboard-rsg .rank-number {
     width: 35px;
     height: 35px;
     font-size: 0.95rem;
   }
+
+  .row-stats-tooltip.rst-rsg {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
-  .leaderboard-table thead th.rank {
+  .leaderboard-rsg .leaderboard-table thead th.rank {
     width: 45px;
   }
 
-  .leaderboard-table thead th.wins {
+  .leaderboard-rsg .leaderboard-table thead th.wins {
     width: 90px;
   }
 
-  .player-head {
+  .leaderboard-rsg .player-head {
     display: none;
   }
 }

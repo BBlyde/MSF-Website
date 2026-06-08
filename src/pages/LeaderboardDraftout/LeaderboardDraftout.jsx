@@ -146,7 +146,7 @@ function LeaderboardDraftout() {
 
       {hoveredPlayer && (
         <div
-          className="row-stats-tooltip"
+          className="row-stats-tooltip rst-draftout"
           style={{ left: tooltipPos.x + 18, top: tooltipPos.y + 18 }}
         >
           <div className="rst-header">
