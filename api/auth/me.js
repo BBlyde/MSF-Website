@@ -1,5 +1,5 @@
-import { verifySignedPayload, parseCookies, COOKIE_SESSION } from '../lib/oauth.js'
-import { isDiscordAdmin } from '../lib/adminAuth.js'
+import { verifySignedPayload, parseCookies, COOKIE_SESSION } from '../../lib/oauth.js'
+import { isDiscordAdmin } from '../../lib/adminAuth.js'
 
 export default function handler(req, res) {
   if (req.method !== 'GET') {

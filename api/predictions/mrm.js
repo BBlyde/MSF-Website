@@ -1,5 +1,5 @@
-import { backendAbsoluteUrlFromBrowserRequest } from '../lib/backendApiProxy.js'
-import { getJsonBody } from '../lib/getJsonBody.js'
+import { backendAbsoluteUrlFromBrowserRequest } from '../../lib/backendApiProxy.js'
+import { getJsonBody } from '../../lib/getJsonBody.js'
 
 function backendPredictionUrl() {
   return backendAbsoluteUrlFromBrowserRequest('/api/prediction/mrm')

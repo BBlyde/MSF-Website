@@ -5,7 +5,7 @@ import {
   COOKIE_SESSION,
   COOKIE_STATE,
   cookieAttrs,
-} from '../../lib/oauth.js'
+} from '../../../lib/oauth.js'
 
 function siteOrigin(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost'

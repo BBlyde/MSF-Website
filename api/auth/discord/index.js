@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import { signPayload, COOKIE_STATE, cookieAttrs } from '../../lib/oauth.js'
+import { signPayload, COOKIE_STATE, cookieAttrs } from '../../../lib/oauth.js'
 
 export default function handler(req, res) {
   if (req.method !== 'GET') {

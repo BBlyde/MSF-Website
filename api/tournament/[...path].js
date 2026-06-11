@@ -1,5 +1,5 @@
-import { proxyBrowserApiToBackendAdapter } from '../lib/backendApiProxy.js'
-import { denyUnlessAdmin, tournamentWriteRequiresAdmin } from '../lib/adminAuth.js'
+import { proxyBrowserApiToBackendAdapter } from '../../lib/backendApiProxy.js'
+import { denyUnlessAdmin, tournamentWriteRequiresAdmin } from '../../lib/adminAuth.js'
 
 export const config = {
   api: {
