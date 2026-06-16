@@ -18,6 +18,9 @@ const DRAFTOUT_WHITELIST = [
   'afc3be63-ba39-491b-9c3c-32a832ecc905', // vavou45
   'a436cc1c-bad7-4d7d-bfee-a84a853d0b7c', // Wooolfh
   '6a6887fe-dd7c-4f04-98b1-e358ce75c377', // TheGuill84
+  '06bccd79-07c9-41dd-b19d-c9f1e7b123a0', // REMY_SCRATPATATE
+  '85ffd88e-93c3-442e-b086-edd1da20cb02', // Shidauw
+  '0a1b99c9-4c42-4d5a-9ba2-226b5517bd69', // lucalurus_
 ]
 
 export default async function handler(req, res) {
