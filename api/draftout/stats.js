@@ -25,6 +25,9 @@ const DRAFTOUT_WHITELIST = [
   '0a1b99c9-4c42-4d5a-9ba2-226b5517bd69', // lucalurus_
   '70051f01-76ff-41bf-89d4-41551814a7fa', // LeMecDeFrance 
   '21d8bd62-b644-47eb-b32a-bafc59390c10', // So_Stoopid
+  'ed8071e1-0d4c-4b59-9be0-222f93cae55b', // feynoox_
+  '09a6081c-bafb-4686-ba7c-a968c3d76003', // BadClem
+  'aa94d2e7-b998-4765-ac40-f5cace0eedd9', // ByPhantom
 ]
 
 export default async function handler(req, res) {
