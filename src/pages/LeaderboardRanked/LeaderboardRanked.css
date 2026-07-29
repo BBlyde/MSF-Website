@@ -228,11 +228,84 @@
     width: fit-content;
 }
 
+.leaderboard-ranked .leaderboard-table tbody td.score .score-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
 .leaderboard-ranked .leaderboard-table tbody td.score .rank-badge-tooltip {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     position: relative;
+}
+
+.leaderboard-ranked .leaderboard-table tbody td.score .lcq-qualified-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.leaderboard-ranked .leaderboard-table tbody td.score .lcq-qualified-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(134, 206, 52, 0.16);
+    border: 1px solid rgba(134, 206, 52, 0.7);
+    color: #86CE34;
+    cursor: help;
+    line-height: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.leaderboard-ranked .leaderboard-table tbody td.score .lcq-qualified-icon svg {
+    width: 10px;
+    height: 10px;
+    fill: currentColor;
+    display: block;
+}
+
+.leaderboard-ranked .leaderboard-table tbody td.score .lcq-qualified-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    background-color: #1e2a38;
+    color: #e6edf3;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 4px 8px;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 10;
+}
+
+.leaderboard-ranked .leaderboard-table tbody td.score .lcq-qualified-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #30363d;
+}
+
+.leaderboard-ranked .leaderboard-table tbody td.score .lcq-qualified-badge:hover .lcq-qualified-tooltip {
+    visibility: visible;
+    opacity: 1;
 }
 
 .leaderboard-ranked .leaderboard-table tbody td.score .elo-value {
@@ -242,6 +315,10 @@
     font-size: 1rem;
     font-weight: 800;
     line-height: 1;
+}
+
+.leaderboard-ranked .leaderboard-table tbody td.score .rank-badge-tooltip .elo-value {
+    width: auto;
 }
 
 .leaderboard-ranked .leaderboard-table tbody td.rank {

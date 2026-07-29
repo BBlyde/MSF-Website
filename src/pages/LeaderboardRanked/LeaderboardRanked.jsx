@@ -36,7 +36,8 @@ function LeaderboardRanked() {
   const navigate = useNavigate()
   const season = parseInt(searchParams.get('season') || DEFAULT_SEASON, 10)
 
-  const API_URL = 'https://back.mcsr-game.com/leaderboard'
+  const BACKEND_API_URL = 'https://back.mcsr-game.com/leaderboard'
+  const MCSR_API_URL = 'https://api.mcsrranked.com/leaderboard'
 
   const formatTime = (ms) => {
     if (!ms) return '-'
@@ -144,8 +145,8 @@ function LeaderboardRanked() {
     try {
       setLoading(true)
       const [response, mcsrResponse] = await Promise.all([
-        axios.get(`${API_URL}?season=${s}`),
-        axios.get(`https://api.mcsrranked.com/leaderboard?season=${s}`)
+        axios.get(`${BACKEND_API_URL}?season=${s}`),
+        axios.get(`${MCSR_API_URL}?season=${s}`)
       ])
 
       setPlayers(response.data)
@@ -251,15 +252,27 @@ function LeaderboardRanked() {
                           </td>
                           <td className="score">
                             <div className="score-inner">
-                              <span className="rank-badge-tooltip">
-                                <span className="elo-value">{player.elo}</span>
-                                <img src={getRankImg(player.elo).src} alt={getRankImg(player.elo).label} className="rank-badge-img" />
-                                <span className="rank-tooltip-text">{getRankImg(player.elo).label}</span>
+                              <span className="score-badges">
+                                {player.peakElo > 1500 && (
+                                  <span className="lcq-qualified-badge" aria-label="qualifié pour le lcq">
+                                    <span className="lcq-qualified-icon" aria-hidden="true">
+                                      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                        <path d="M8 1.5a6.5 6.5 0 1 0 6.5 6.5A6.51 6.51 0 0 0 8 1.5Zm-1.2 9.7L4 8.4l1.1-1.1 1.7 1.7 4.1-4.1 1.1 1.1Z" />
+                                      </svg>
+                                    </span>
+                                    <span className="lcq-qualified-tooltip">Qualifié LCQ</span>
+                                  </span>
+                                )}
+                                <span className="rank-badge-tooltip">
+                                  <span className="elo-value">{player.elo}</span>
+                                  <img src={getRankImg(player.elo).src} alt={getRankImg(player.elo).label} className="rank-badge-img" />
+                                  <span className="rank-tooltip-text">{getRankImg(player.elo).label}</span>
+                                </span>
                               </span>
                             </div>
                           </td>
                         </tr>
-                        {season > 9 && player.placement === 16 && (
+                        {season > 9 && player.placement === 12 && (
                           <tr className="qualification-threshold">
                             <td colSpan="3">
                               <div className="threshold-line">
@@ -289,7 +302,7 @@ function LeaderboardRanked() {
               {hoveredPlayer.username}
             </div>
             <img
-              src={`https://minotar.net/helm/${hoveredPlayer.username}/32.png`}
+              src={`https://minotar.net/helm/${hoveredPlayer.username}/64.png`}
               alt={hoveredPlayer.username}
               className="rst-head"
             />
