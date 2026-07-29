@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import axios from 'axios'
 import './LeaderboardRsg.css'
+import { minecraftHeadUrl } from '../../utils/minecraftHead'
 
 const SHEET_ID = '1Fgn-assiNCTxiGCUALdRX5i3wRrQHbwE7iSisWynj78'
 const MAIN_SHEET_NAME = 'Leaderboard (sub 15)'
@@ -200,7 +201,7 @@ function LeaderboardRsg() {
                       <td className="player-name">
                         <span className="player-name-inner">
                           <img
-                            src={`https://mc-heads.net/avatar/${player.pseudomc}/24`}
+                            src={minecraftHeadUrl(player.pseudomc || player.runner, 24)}
                             alt={player.runner}
                             className="player-head"
                           />

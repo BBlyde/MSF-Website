@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import './LeaderboardDraftout.css'
+import { minecraftHeadUrl } from '../../utils/minecraftHead'
 
 const API_URL = '/api/draftout/stats'
 
@@ -119,7 +120,7 @@ function LeaderboardDraftout() {
                         <td className="player-name">
                           <span className="player-name-inner">
                             <img
-                              src={`https://minotar.net/helm/${player.username}/100.png`}
+                              src={minecraftHeadUrl(player.username, 100)}
                               alt={player.username}
                               className="player-head"
                             />

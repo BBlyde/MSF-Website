@@ -18,6 +18,7 @@ import diamond1Img from '../../assets/diamond1.png'
 import diamond2Img from '../../assets/diamond2.png'
 import diamond3Img from '../../assets/diamond3.png'
 import netheriteImg from '../../assets/netherite.png'
+import { minecraftHeadUrl } from '../../utils/minecraftHead'
 
 const DEFAULT_SEASON = 11
 
@@ -302,7 +303,7 @@ function LeaderboardRanked() {
               {hoveredPlayer.username}
             </div>
             <img
-              src={`https://minotar.net/helm/${hoveredPlayer.username}/64.png`}
+              src={minecraftHeadUrl(hoveredPlayer.username, 64)}
               alt={hoveredPlayer.username}
               className="rst-head"
             />
