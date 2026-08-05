@@ -87,7 +87,7 @@ export function devApiPlugin() {
             }
             const pathWithQuery = pathname + (url.search || '')
             if (
-              pathname.startsWith('/api/tournament') &&
+              (pathname.startsWith('/api/tournament') || pathname.startsWith('/api/lcq-mrm')) &&
               tournamentWriteRequiresAdmin(req.method) &&
               denyUnlessAdmin(req, vres)
             ) {
