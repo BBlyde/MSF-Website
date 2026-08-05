@@ -327,7 +327,7 @@ function LeaderboardRanked() {
               <span className="rst-label">Winrate</span>
               <span className="rst-value rst-win">
                 {hoveredPlayer.stats.playedMatches.ranked > 0
-                  ? ((hoveredPlayer.stats.wins.ranked / hoveredPlayer.stats.playedMatches.ranked) * 100).toFixed(1)
+                  ? ((hoveredPlayer.stats.wins.ranked + ((hoveredPlayer.stats.playedMatches.ranked - hoveredPlayer.stats.wins.ranked - hoveredPlayer.stats.loses.ranked) / 2)) / hoveredPlayer.stats.playedMatches.ranked * 100).toFixed(1)
                   : '0.0'}%
               </span>
 

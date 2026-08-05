@@ -87,10 +87,12 @@ function Header() {
   return (
     <header className={headerClass}>
       <div className="header-container">
-        <div className="header-logo">
-          <img src={msfLogo} alt="MSF Logo" className="logo-image" />
-          <div><span id="msf">MSF</span><span id="leaderboard" className={leaderboardClass}>{leaderboardLabel}</span></div>
-        </div>
+        <Link to="/" className="header-logo-link" aria-label="Retour a l'accueil">
+          <div className="header-logo">
+            <img src={msfLogo} alt="MSF Logo" className="logo-image" />
+            <div><span id="msf">MSF</span><span id="leaderboard" className={leaderboardClass}>{leaderboardLabel}</span></div>
+          </div>
+        </Link>
         <nav className="header-nav">
           <ul>
             <li className='nav-home'><Link to="/">ACCUEIL</Link></li>
