@@ -29,6 +29,7 @@ const DRAFTOUT_WHITELIST = [
   '09a6081c-bafb-4686-ba7c-a968c3d76003', // BadClem
   'aa94d2e7-b998-4765-ac40-f5cace0eedd9', // ByPhantom
   'd80dd226-1adf-4d22-9314-763ea512c540', // aquilo__ 
+  '854c6508-08f8-4bd9-b3e7-d428d199fd64', // inqchi
 ]
 
 export default async function handler(req, res) {
