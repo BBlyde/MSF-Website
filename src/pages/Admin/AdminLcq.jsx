@@ -188,9 +188,9 @@ function AdminLcq() {
 
       {scoreboard && (
         <div className="admin-lcq-scoreboard">
-          <div className="admin-lcq-scoreboard-header">
-            <h2>Event {scoreboard.eventId}</h2>
-            <span className="info">
+          <div className="admin-lcq-title">
+            <span>Event {scoreboard.eventId}</span>
+            <span className="admin-lcq-title-info">
               {matchIds.length}/{SEED_COUNT} seed(s)
             </span>
           </div>
@@ -199,7 +199,8 @@ function AdminLcq() {
             <table className="admin-lcq-table">
               <thead>
                 <tr>
-                  <th>Joueur</th>
+                  <th className="col-rank">#</th>
+                  <th className="col-player">Runner</th>
                   {seedColumns.map(({ seed, matchId: mid }) => (
                     <th key={seed}>
                       <div className="admin-lcq-match-col">
@@ -223,20 +224,25 @@ function AdminLcq() {
                       </div>
                     </th>
                   ))}
-                  <th>Total</th>
+                  <th className="col-pts">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {players.length === 0 ? (
                   <tr>
-                    <td colSpan={SEED_COUNT + 2} className="admin-lcq-empty-row">
+                    <td colSpan={SEED_COUNT + 3} className="admin-lcq-empty-row">
                       Aucun joueur pour le moment. Ajoute un match pour remplir les seeds.
                     </td>
                   </tr>
                 ) : (
-                  players.map((player) => (
+                  players.map((player, i) => (
                     <tr key={player.uuid}>
-                      <td>{player.nickname || player.uuid}</td>
+                      <td className="col-rank">{i + 1}</td>
+                      <td className="col-player">
+                        <img src={`https://mc-heads.net/avatar/${player.uuid}/48`} className="player-head" />
+                        &nbsp;&nbsp;
+                        {player.nickname || player.uuid}
+                      </td>
                       {seedColumns.map(({ seed, matchId: mid }) => {
                         const cell = mid != null ? player.matches?.[String(mid)] : null
                         return (
@@ -245,7 +251,7 @@ function AdminLcq() {
                           </td>
                         )
                       })}
-                      <td className="admin-lcq-total">{player.total ?? '—'}</td>
+                      <td className="col-pts">{player.total ?? '—'}</td>
                     </tr>
                   ))
                 )}

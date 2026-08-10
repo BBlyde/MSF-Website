@@ -134,7 +134,7 @@
 }
 
 .admin-lcq {
-  width: min(1200px, 100%);
+  width: min(1600px, 100%);
   padding: 0 16px 32px;
   display: flex;
   flex-direction: column;
@@ -176,17 +176,33 @@
   margin: 0;
 }
 
-.admin-lcq-scoreboard-header {
+.admin-lcq-scoreboard {
+  width: 100%;
+  max-width: 100%;
+  background: #161b22;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.admin-lcq-title {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  padding: 0.6rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #fff;
+  background: linear-gradient(90deg, #86CE34 0%, #102C30 75%) #102C30;
 }
 
-.admin-lcq-scoreboard-header h2 {
-  margin: 0;
-  font-size: 1.1rem;
+.admin-lcq-title-info {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  opacity: 0.85;
 }
 
 .admin-lcq-table-wrap {
@@ -196,20 +212,68 @@
 .admin-lcq-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95rem;
-}
-
-.admin-lcq-table th,
-.admin-lcq-table td {
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 8px 10px;
-  text-align: center;
   white-space: nowrap;
 }
 
-.admin-lcq-table th:first-child,
-.admin-lcq-table td:first-child {
+.admin-lcq-table thead tr {
+  background-color: #111;
+}
+
+.admin-lcq-table th {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #555;
+  text-align: center;
+  border-bottom: 1px solid #2e2e2e;
+}
+
+.admin-lcq-table td {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #ccc;
+  text-align: center;
+}
+
+.admin-lcq-table tbody tr {
+  border-bottom: 1px solid #222;
+  transition: background 0.15s;
+}
+
+.admin-lcq-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.admin-lcq-table tbody tr:hover {
+  background: rgba(75, 75, 75, 0.2);
+}
+
+.admin-lcq-table th.col-player,
+.admin-lcq-table td.col-player {
   text-align: left;
+  white-space: nowrap;
+}
+
+.admin-lcq-table td.col-player .player-head {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.admin-lcq-table td.col-rank {
+  color: #555;
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: 28px;
+}
+
+.admin-lcq-table td.col-pts,
+.admin-lcq-table th.col-pts {
+  font-weight: 700;
+  color: #fff;
 }
 
 .admin-lcq-total {
