@@ -400,6 +400,17 @@
 }
 
 @media (max-width: 768px) {
+    .leaderboard-ranked .season-nav {
+        width: 100%;
+        gap: 0.75rem;
+    }
+
+    .leaderboard-ranked .countdown {
+        width: min(350px, 100%);
+        min-width: 0;
+        padding: 1rem 1.25rem;
+    }
+
     .leaderboard-container {
         padding: 1rem;
     }
@@ -433,6 +444,30 @@
 }
 
 @media (max-width: 480px) {
+    .leaderboard-ranked .season-nav {
+        gap: 0.25rem;
+    }
+
+    .leaderboard-ranked .season-arrow {
+        padding: 0.5rem;
+    }
+
+    .leaderboard-ranked .countdown {
+        flex: 1;
+        width: auto;
+        padding: 0.9rem 0.75rem;
+    }
+
+    .leaderboard-ranked .countdown-timer {
+        font-size: 1.25rem;
+        letter-spacing: 1px;
+    }
+
+    .leaderboard-ranked .countdown-date {
+        font-size: 0.68rem;
+        text-align: center;
+    }
+
     .leaderboard-ranked .leaderboard-table thead th.rank {
         width: 45px;
     }

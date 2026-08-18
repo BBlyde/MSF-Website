@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './LeaderboardRanked.css'
@@ -20,9 +20,11 @@ import diamond3Img from '../../assets/diamond3.png'
 import netheriteImg from '../../assets/netherite.png'
 import { minecraftHeadUrl } from '../../utils/minecraftHead'
 
-const DEFAULT_SEASON = 11
+// Default season & limit for LCQ qualification check
+const CURRENT_SEASON = 11
+const TOP_LCQ_PLAYERS_COUNT = 60
 
-function LeaderboardRanked() {
+const LeaderboardRanked = () => {
   const [players, setPlayers] = useState([])
   const [filteredPlayers, setFilteredPlayers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -32,49 +34,132 @@ function LeaderboardRanked() {
   const [seasonEndDate, setSeasonEndDate] = useState(null)
   const [hoveredPlayer, setHoveredPlayer] = useState(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
-  const playerCache = useRef({})
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const season = parseInt(searchParams.get('season') || DEFAULT_SEASON, 10)
+  const season = parseInt(searchParams.get('season') || CURRENT_SEASON, 10)
 
   const BACKEND_API_URL = 'https://back.mcsr-game.com/leaderboard'
   const MCSR_API_URL = 'https://api.mcsrranked.com/leaderboard'
 
-  const formatTime = (ms) => {
-    if (!ms) return '-'
-    const totalSeconds = Math.floor(ms / 1000)
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = totalSeconds % 60
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  /**
+   * Retrieve leaderboard data from the backend API and MCSR API, and update the state with the fetched data.
+   * 
+   * @param {number} season The season number for which to fetch the leaderboard data.
+   */
+  const fetchLeaderboard = async (season) => {
+    try {
+      setLoading(true)
+
+      // Api calls
+      const [response, mcsrResponse] = await Promise.all([
+        axios.get(`${BACKEND_API_URL}?season=${season}`),
+        axios.get(`${MCSR_API_URL}?season=${season}`)
+      ])
+
+      // Map the response data to include lcqQualified property
+      const nextPlayers = response.data.map((player) => ({
+        ...player,
+        lcqQualified: false,
+      }))
+
+      // Only compute LCQ qualification for the current season, waiting for every
+      // per-runner check before the leaderboard is shown
+      if (Number(season) === CURRENT_SEASON) {
+        const topLcqPlayers = nextPlayers.filter((player) => Number(player.placement) <= TOP_LCQ_PLAYERS_COUNT)
+        const lcqChecks = await Promise.allSettled(
+          topLcqPlayers.map(async (player) => {
+            const res = await axios.get(`https://mcsrranked.com/api/users/${player.username}?season=${season}`)
+            const peakElo = res.data?.data?.seasonResult?.highest
+            return getLcqQualified(peakElo, player)
+          })
+        )
+
+        lcqChecks.forEach((result, index) => {
+          topLcqPlayers[index].lcqQualified = result.status === 'fulfilled' ? result.value : getLcqQualified(undefined, topLcqPlayers[index])
+        })
+      }
+
+      setPlayers(nextPlayers)
+      setSeasonEndDate(mcsrResponse.data.data.season.endsAt)
+      setLoading(false)
+    } catch (err) {
+      setError("Erreur de récupération du classement")
+      setLoading(false)
+    }
   }
 
+  /**
+   * Formatt time as "minutes:seconds" or "-" if invalid
+   * 
+   * @param {number} ms 
+   * @returns {string} formatted time
+   */
+  const formatTime = (ms) => {
+    if (ms) {
+      const totalSeconds = Math.floor(ms / 1000)
+      const minutes = Math.floor(totalSeconds / 60)
+      const seconds = totalSeconds % 60
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`
+    } else {
+      return '-'
+    }
+  }
+
+  /**
+   * Determine if a player is qualified for LCQ (season peak elo > 1500)
+   * 
+   * @param {number} [seasonPeakElo] seasonResult.highest from the per-runner mcsrranked API call
+   * @param {object} player The leaderboard player entry (backend data), used as a fallback
+   * @returns {boolean} whether the player is LCQ qualified
+   */
+  const getLcqQualified = (seasonPeakElo, player) => {
+    return Number(seasonPeakElo ?? player.peakElo ?? 0) > 1500
+  }
+
+  /**
+   * Handle mouse enter event on a leaderboard row to fetch and display player stats in a tooltip.
+   * 
+   * @param {object} player The player object for the hovered row.
+   * @param {object} e The mouse event object.
+   */
   const handleRowMouseEnter = useCallback(async (player, e) => {
-    const cacheKey = `${player.uuid}_s${season}`
-    const cached = playerCache.current[cacheKey]
-    setHoveredPlayer({ ...player, stats: cached ?? null })
+    setHoveredPlayer({ ...player, stats: null })
     setTooltipPos({ x: e.clientX, y: e.clientY })
-    if (!cached) {
-      try {
-        const res = await axios.get(`https://mcsrranked.com/api/users/${player.username}?season=${season}`)
-        const stats = { ...res.data.data.statistics.season, eloRank: res.data.data.eloRank }
-        playerCache.current[cacheKey] = stats
-        setHoveredPlayer(prev =>
-          prev?.uuid === player.uuid ? { ...prev, stats } : prev
-        )
-      } catch {
-        playerCache.current[cacheKey] = 'error'
-      }
+    try {
+      const res = await axios.get(`https://mcsrranked.com/api/users/${player.username}?season=${season}`)
+      const stats = { ...res.data.data.statistics.season, eloRank: res.data.data.eloRank }
+      setHoveredPlayer(prev =>
+        prev?.uuid === player.uuid ? { ...prev, stats } : prev
+      )
+    } catch {
+      setHoveredPlayer(prev =>
+        prev?.uuid === player.uuid ? { ...prev, stats: 'error' } : prev
+      )
     }
   }, [season])
 
+  /**
+   * Handle mouse move event on a leaderboard row to update the tooltip position.
+   * 
+   * @param {object} e The mouse event object.
+   */
   const handleRowMouseMove = useCallback((e) => {
     setTooltipPos({ x: e.clientX, y: e.clientY })
   }, [])
 
+  /**
+   * Handle mouse leave event on a leaderboard row to hide the tooltip.
+   */
   const handleRowMouseLeave = useCallback(() => {
     setHoveredPlayer(null)
   }, [])
 
+  /**
+   * Get the rank image and label based on the player's elo rating.
+   *
+   * @param {number} elo The player's elo rating.
+   * @returns {object} An object containing the rank image source and label.
+   */
   const getRankImg = (elo) => {
     if (elo >= 2000) return { src: netheriteImg, label: 'Netherite' }
     if (elo >= 1800) return { src: diamond3Img, label: 'Diamond III' }
@@ -94,11 +179,23 @@ function LeaderboardRanked() {
     return { src: coal1Img, label: 'Coal I' }
   }
 
+  /**
+   * Get the URL of the country's flag image
+   * 
+   * @param {string} countryCode The ISO 3166-1 alpha-2 country code.
+   * @returns {string} The URL of the country's flag image.
+   */
   const countryToFlag = (countryCode) => {
     if (!countryCode) return ''
     return `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`
   }
 
+  /**
+   * Format the time left until the given end timestamp.
+   *
+   * @param {number} endTimestamp The end timestamp in seconds.
+   * @returns {string} The formatted time left.
+   */
   const formatTimeLeft = (endTimestamp) => {
     if (!endTimestamp) return '...'
     const targetDate = endTimestamp * 1000
@@ -117,6 +214,12 @@ function LeaderboardRanked() {
     return `${days}j ${hours}h ${minutes}m ${seconds}s`
   }
 
+  /**
+   * Format the end date of the given end timestamp.
+   *
+   * @param {number} endTimestamp The end timestamp in seconds.
+   * @returns {string} The formatted end date.
+   */
   const formatEndDate = (endTimestamp) => {
     if (!endTimestamp) return ''
     return new Date(endTimestamp * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -142,24 +245,10 @@ function LeaderboardRanked() {
     setFilteredPlayers(filtered)
   }, [searchTerm, players])
 
-  const fetchLeaderboard = async (s) => {
-    try {
-      setLoading(true)
-      const [response, mcsrResponse] = await Promise.all([
-        axios.get(`${BACKEND_API_URL}?season=${s}`),
-        axios.get(`${MCSR_API_URL}?season=${s}`)
-      ])
 
-      setPlayers(response.data)
-      setSeasonEndDate(mcsrResponse.data.data.season.endsAt)
-      setLoading(false)
-    } catch (err) {
-      setError("Erreur de récupération du classement")
-      setLoading(false)
-    }
-  }
 
   return (
+    // Main container for the ranked leaderboard page
     <div className="leaderboard-ranked">
       <div className="leaderboard-container">
         <div className="leaderboard-header">
@@ -254,7 +343,7 @@ function LeaderboardRanked() {
                           <td className="score">
                             <div className="score-inner">
                               <span className="score-badges">
-                                {player.peakElo > 1500 && (
+                                {player.lcqQualified && (
                                   <span className="lcq-qualified-badge" aria-label="qualifié pour le lcq">
                                     <span className="lcq-qualified-icon" aria-hidden="true">
                                       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -273,7 +362,7 @@ function LeaderboardRanked() {
                             </div>
                           </td>
                         </tr>
-                        {season > 9 && player.placement === 12 && (
+                        {season === CURRENT_SEASON && player.placement === 12 && (
                           <tr className="qualification-threshold">
                             <td colSpan="3">
                               <div className="threshold-line">
@@ -292,6 +381,7 @@ function LeaderboardRanked() {
         )}
       </div>
 
+      // Tooltip for hovered player stats
       {hoveredPlayer && (
         <div
           className="row-stats-tooltip rst-ranked"
@@ -336,6 +426,9 @@ function LeaderboardRanked() {
 
               <span className="rst-label">PB</span>
               <span className="rst-value">{formatTime(hoveredPlayer.stats.bestTime.ranked)}</span>
+
+              <span className="rst-label">Peak elo</span>
+              <span className="rst-value">{hoveredPlayer.peakElo ?? '-'}</span>
 
               <span className="rst-label">Win streak</span>
               <span className="rst-value">
